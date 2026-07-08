@@ -532,7 +532,7 @@ export default function InvitationManager({
         <div>
           <h2 className="font-mono font-bold text-slate-900 text-lg uppercase flex items-center gap-2">
             <Layers className="w-5 h-5 text-[#141414]" />
-            <span>02. Invitation & RSVP Campaign Station</span>
+            <span>03. Invitation & RSVP Campaign Station</span>
           </h2>
           <p className="text-xs text-slate-500 font-serif-italic">
             Manage your campaign flow: add participants, import spreadsheets, coordinate multi-channel dispatches, and track real-time delivery status.

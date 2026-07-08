@@ -110,7 +110,7 @@ export default function Header({
       </div>
 
       {/* Main Brand & Details Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
         <div>
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 bg-[#141414] text-[#E4E3E0] border border-[#141414] rounded-none flex items-center justify-center font-black text-xl font-mono shadow-none">
@@ -140,9 +140,9 @@ export default function Header({
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="btn-action-custom text-[11px] h-9"
+            className="btn-action-refresh absolute md:relative top-4 right-4 md:top-auto md:right-auto"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3 md:w-3.5 h-3 md:h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>RE-SYNC</span>
           </button>
         </div>

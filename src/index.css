@@ -47,6 +47,40 @@
   color: #E4E3E0;
 }
 
+.btn-action-refresh {
+  border: 1px solid #141414;
+  background-color: transparent;
+  color: #141414;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 8px;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 4px 6px;
+  transition: all 0.1s ease-in-out;
+  border-radius: 0px !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 22px;
+}
+
+.btn-action-refresh:hover {
+  background-color: #141414;
+  color: #E4E3E0;
+}
+
+@media (min-width: 768px) {
+  .btn-action-refresh {
+    font-size: 11px;
+    padding: 8px 12px;
+    gap: 6px;
+    height: 36px;
+    border-width: 1.5px;
+  }
+}
+
 .btn-action-primary {
   border: 1.5px solid #141414;
   background-color: #141414;

@@ -30,7 +30,10 @@ export type ActivityType =
   | 'SONG_REQUEST'
   | 'STAFF_BEST_PHOTO'
   | 'STAFF_ACTIVE'
+  | 'NETWORKING'
   | 'CUSTOM';
+
+export type ValidationMethod = 'AUTOMATIC' | 'STAFF_APPROVAL' | 'QR_SCAN' | 'GPS' | 'MANUAL_APPROVAL';
 
 export interface ActivitySubmission {
   id: string;
@@ -96,9 +99,30 @@ export interface EventConfig {
   venue: string;
   date: string;
   time: string;
-  schedule: Array<{ time: string; activity: string }>;
-  pointRules: Record<ActivityType, number>;
+  schedule: Array<{ time: string; activity: string; description?: string }>;
+  pointRules: Record<string, number>;
   googleMapsUrl?: string;
+  activities?: Array<{
+    id: string;
+    type: ActivityType | string;
+    name: string;
+    description?: string;
+    isEnabled: boolean;
+    requireApproval: boolean;
+    validationMethod: ValidationMethod;
+    startTime?: string;
+    endTime?: string;
+    points?: number;
+    requiresCamera?: boolean;
+    requiresGallery?: boolean;
+  }>;
+  sponsorBooths?: Array<{
+    id: string;
+    name: string;
+    boothCode: string;
+    pointsReward: number;
+    locationDescription: string;
+  }>;
 }
 
 export interface EventPlannerItem {
@@ -117,7 +141,7 @@ export interface EventPlannerItem {
     parkingInstructions: string;
     googleMapsUrl?: string;
   };
-  schedule: Array<{ id: string; time: string; activity: string }>;
+  schedule: Array<{ id: string; time: string; activity: string; description?: string }>;
   seatingLayout: {
     tablesCount: number;
     seatsPerTable: number;
@@ -127,10 +151,17 @@ export interface EventPlannerItem {
   pointRules: Record<ActivityType, number>;
   activities: Array<{
     id: string;
-    type: ActivityType;
+    type: ActivityType | string;
     name: string;
+    description?: string;
     isEnabled: boolean;
     requireApproval: boolean;
+    validationMethod: ValidationMethod;
+    startTime?: string;
+    endTime?: string;
+    points?: number;
+    requiresCamera?: boolean;
+    requiresGallery?: boolean;
   }>;
   sponsorBooths: Array<{
     id: string;
@@ -179,4 +210,33 @@ export interface EventPlannerItem {
     dayOfMessage: string;
   };
 }
+
+export interface BoothVisit {
+  id: string;
+  participantId: string;
+  participantName: string;
+  participantEmail: string;
+  participantCompany: string;
+  participantPosition: string;
+  boothId: string;
+  boothName: string;
+  boothCode: string;
+  pointsAwarded: number;
+  visitedAt: string;
+}
+
+export interface NetworkingConnection {
+  id: string;
+  fromParticipantId: string;
+  fromParticipantName: string;
+  fromParticipantCompany: string;
+  fromParticipantPosition: string;
+  toParticipantId: string;
+  toParticipantName: string;
+  toParticipantCompany: string;
+  toParticipantPosition: string;
+  pointsAwarded: number;
+  connectedAt: string;
+}
+
 

@@ -79,7 +79,7 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
   });
 
   const [schedule, setSchedule] = useState<Array<{ id: string; time: string; activity: string }>>([]);
-  const [activities, setActivities] = useState<Array<{ id: string; type: ActivityType; name: string; isEnabled: boolean; requireApproval: boolean }>>([]);
+  const [activities, setActivities] = useState<Array<{ id: string; type: ActivityType | string; name: string; description?: string; isEnabled: boolean; requireApproval: boolean; validationMethod: string; startTime?: string; endTime?: string; points?: number; requiresCamera?: boolean; requiresGallery?: boolean; }>>([]);
   const [sponsorBooths, setSponsorBooths] = useState<Array<{ id: string; name: string; boothCode: string; pointsReward: number; locationDescription: string }>>([]);
   const [luckyDrawCategories, setLuckyDrawCategories] = useState<Array<{ id: string; name: string; eligiblePointsMin: number; prizeName: string; quantity: number }>>([]);
   const [prizes, setPrizes] = useState<Array<{ id: string; name: string; description: string; stock: number; pointsRequiredToRedeem: number; imageUrl?: string }>>([]);
@@ -290,11 +290,13 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
           SONG_REQUEST: 5,
           STAFF_BEST_PHOTO: 5,
           STAFF_ACTIVE: 5,
+          NETWORKING: 15,
           CUSTOM: 5
         },
         activities: [
-          { id: `act-${Date.now()}-1`, type: "CHECK_IN", name: "Main Desk Check-In", isEnabled: true, requireApproval: false },
-          { id: `act-${Date.now()}-2`, type: "FEEDBACK", name: "Post-event Feedback", isEnabled: true, requireApproval: false }
+          { id: `act-${Date.now()}-1`, type: "CHECK_IN", name: "Main Desk Check-In", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC" },
+          { id: `act-${Date.now()}-2`, type: "FEEDBACK", name: "Post-event Feedback", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC" },
+          { id: `act-${Date.now()}-3`, type: "NETWORKING", name: "Attendee Networking Challenge", isEnabled: true, requireApproval: false, validationMethod: "QR_SCAN", points: 15 }
         ],
         sponsorBooths: [
           { id: `sb-${Date.now()}-1`, name: "Enterprise Sponsor A", boothCode: "BOOTH-A", pointsReward: 10, locationDescription: "Lobby Center" }
@@ -375,7 +377,32 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
     setSchedule(schedule.filter(s => s.id !== id));
   };
 
-  const updateScheduleSlot = (id: string, field: 'time' | 'activity', val: string) => {
+  const addActivity = () => {
+    const uniqueId = `ACT_${Date.now()}`;
+    setActivities([
+      ...activities,
+      {
+        id: uniqueId,
+        type: `CUSTOM_${uniqueId}`,
+        name: 'New Custom Activity',
+        description: '',
+        isEnabled: true,
+        requireApproval: false,
+        validationMethod: 'STAFF_APPROVAL',
+        startTime: '09:00 AM',
+        endTime: '10:00 PM',
+        points: 10,
+        requiresCamera: false,
+        requiresGallery: false
+      }
+    ]);
+  };
+
+  const removeActivity = (id: string) => {
+    setActivities(activities.filter(a => a.id !== id));
+  };
+
+  const updateScheduleSlot = (id: string, field: 'time' | 'activity' | 'description', val: string) => {
     setSchedule(schedule.map(s => s.id === id ? { ...s, [field]: val } : s));
   };
 
@@ -841,13 +868,22 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
                                       title="Activity finish time"
                                     />
                                   </div>
-                                  <input 
-                                    type="text" 
-                                    value={slot.activity}
-                                    onChange={(e) => updateScheduleSlot(slot.id, 'activity', e.target.value)}
-                                    placeholder="Session activity name"
-                                    className="flex-1 border-b border-gray-300 focus:border-black outline-none text-[10px] px-1 py-0.5"
-                                  />
+                                  <div className="flex-1 flex flex-col gap-1.5">
+                                    <input 
+                                      type="text" 
+                                      value={slot.activity}
+                                      onChange={(e) => updateScheduleSlot(slot.id, 'activity', e.target.value)}
+                                      placeholder="Session activity name"
+                                      className="w-full border-b border-gray-300 focus:border-black outline-none text-[10px] font-bold px-1 py-0.5"
+                                    />
+                                    <input 
+                                      type="text" 
+                                      value={slot.description || ''}
+                                      onChange={(e) => updateScheduleSlot(slot.id, 'description', e.target.value)}
+                                      placeholder="Session details / description / location"
+                                      className="w-full border-b border-gray-200 focus:border-black outline-none text-[9px] text-slate-500 px-1 py-0.5"
+                                    />
+                                  </div>
                                   <button
                                     type="button"
                                     onClick={() => removeScheduleSlot(slot.id)}
@@ -869,52 +905,167 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
 
                         {/* Interactive Activities list */}
                         <div className="bg-[#DFDEDA] p-4 border border-[#141414] space-y-3">
-                          <h4 className="font-bold text-[10px] uppercase text-indigo-800 border-b border-[#141414] pb-1.5 mb-2 flex items-center gap-1">
-                            <CheckSquare className="w-3.5 h-3.5" />
-                            <span>Configure Eligible Gamified Activities</span>
-                          </h4>
+                          <div className="flex justify-between items-center border-b border-[#141414] pb-1.5 mb-2">
+                            <h4 className="font-bold text-[10px] uppercase text-indigo-800 flex items-center gap-1">
+                              <CheckSquare className="w-3.5 h-3.5" />
+                              <span>Configure Gamified Activities</span>
+                            </h4>
+                            <button
+                              type="button"
+                              onClick={addActivity}
+                              className="px-2 py-0.5 bg-slate-800 text-white text-[8px] font-bold uppercase transition-all hover:bg-neutral-700 flex items-center gap-1 cursor-pointer"
+                            >
+                              <Plus className="w-2.5 h-2.5" />
+                              <span>Add Custom</span>
+                            </button>
+                          </div>
 
-                          <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                             {activities.map((act, index) => (
-                              <div key={act.id || index} className="bg-white p-3 border border-slate-300 space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-black text-[10px] text-slate-800 uppercase">
-                                    {act.name}
-                                  </span>
-                                  <span className="text-[8px] bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold px-1.5 py-0.2 uppercase font-mono">
-                                    {act.type}
-                                  </span>
+                              <div key={act.id || index} className="bg-white p-3 border border-slate-300 space-y-3">
+                                <div className="flex items-start justify-between">
+                                  {act.type.startsWith('CUSTOM') ? (
+                                    <input 
+                                      type="text" 
+                                      value={act.name}
+                                      onChange={(e) => setActivities(activities.map(a => a.id === act.id ? { ...a, name: e.target.value } : a))}
+                                      placeholder="Activity Name"
+                                      className="font-black text-[10px] text-slate-800 uppercase border-b border-gray-300 outline-none w-2/3 focus:border-black"
+                                    />
+                                  ) : (
+                                    <span className="font-black text-[10px] text-slate-800 uppercase">{act.name}</span>
+                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[8px] bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold px-1.5 py-0.5 uppercase font-mono max-w-[80px] truncate" title={act.type}>
+                                      {act.type.startsWith('CUSTOM') ? 'CUSTOM' : act.type}
+                                    </span>
+                                    {act.type.startsWith('CUSTOM') && (
+                                      <button onClick={() => removeActivity(act.id)} className="text-red-600 hover:text-red-800 cursor-pointer">
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="flex items-center justify-between gap-4 text-[9px] pt-1 border-t border-dotted border-gray-200">
-                                  <label className="flex items-center gap-1.5 cursor-pointer">
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[9px] font-mono">
+                                  {act.type.startsWith('CUSTOM') && (
+                                    <div className="sm:col-span-2">
+                                      <input 
+                                        type="text" 
+                                        value={act.description || ''}
+                                        onChange={(e) => setActivities(activities.map(a => a.id === act.id ? { ...a, description: e.target.value } : a))}
+                                        placeholder="Description"
+                                        className="w-full border-b border-gray-300 focus:border-black outline-none px-1 py-0.5"
+                                      />
+                                    </div>
+                                  )}
+
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-slate-500 font-bold uppercase">Time Range</span>
+                                    <div className="flex items-center gap-1">
+                                      <input 
+                                        type="text" 
+                                        value={act.startTime || ''}
+                                        onChange={(e) => setActivities(activities.map(a => a.id === act.id ? { ...a, startTime: e.target.value } : a))}
+                                        placeholder="09:00 AM"
+                                        className="w-16 border-b border-gray-300 focus:border-black outline-none text-center"
+                                      />
+                                      <span className="text-[7px]">to</span>
+                                      <input 
+                                        type="text" 
+                                        value={act.endTime || ''}
+                                        onChange={(e) => setActivities(activities.map(a => a.id === act.id ? { ...a, endTime: e.target.value } : a))}
+                                        placeholder="05:00 PM"
+                                        className="w-16 border-b border-gray-300 focus:border-black outline-none text-center"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-slate-500 font-bold uppercase">Validation Method</span>
+                                    <select
+                                      value={act.validationMethod || 'STAFF_APPROVAL'}
+                                      onChange={(e) => setActivities(activities.map(a => a.id === act.id ? { ...a, validationMethod: e.target.value } : a))}
+                                      className="border border-gray-300 p-0.5 outline-none focus:border-black bg-white cursor-pointer"
+                                    >
+                                      <option value="AUTOMATIC">Automatic</option>
+                                      <option value="STAFF_APPROVAL">Staff Approval</option>
+                                      <option value="QR_SCAN">QR Scan</option>
+                                      <option value="GPS">GPS Geolocation</option>
+                                      <option value="MANUAL_APPROVAL">Manual Verification</option>
+                                    </select>
+                                  </div>
+
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-slate-500 font-bold uppercase">Points</span>
                                     <input 
-                                      type="checkbox" 
-                                      checked={act.isEnabled}
-                                      onChange={(e) => {
-                                        setActivities(activities.map(a => a.id === act.id ? { ...a, isEnabled: e.target.checked } : a));
-                                      }}
-                                      className="rounded-none accent-black border-gray-300" 
+                                      type="number"
+                                      value={act.points ?? pointRules[act.type as keyof typeof pointRules] ?? 5}
+                                      onChange={(e) => setActivities(activities.map(a => a.id === act.id ? { ...a, points: parseInt(e.target.value) || 0 } : a))}
+                                      className="border border-gray-300 p-0.5 outline-none focus:border-black w-16 text-center"
                                     />
-                                    <span className="font-bold text-gray-700">ENABLED</span>
-                                  </label>
-                                  
-                                  <label className="flex items-center gap-1.5 cursor-pointer">
-                                    <input 
-                                      type="checkbox" 
-                                      checked={act.requireApproval}
-                                      onChange={(e) => {
-                                        setActivities(activities.map(a => a.id === act.id ? { ...a, requireApproval: e.target.checked } : a));
-                                      }}
-                                      className="rounded-none accent-black border-gray-300" 
-                                    />
-                                    <span className="font-bold text-gray-700">REQUIRES STAFF APPROVAL</span>
-                                  </label>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col gap-2 pt-2 border-t border-dotted border-gray-200">
+                                  <div className="flex flex-wrap items-center gap-4 text-[9px]">
+                                    <label className="flex items-center gap-1.5 cursor-pointer">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={act.isEnabled}
+                                        onChange={(e) => setActivities(activities.map(a => a.id === act.id ? { ...a, isEnabled: e.target.checked } : a))}
+                                        className="rounded-none accent-black border-gray-300" 
+                                      />
+                                      <span className="font-bold text-gray-700">ENABLED</span>
+                                    </label>
+                                    <label className="flex items-center gap-1.5 cursor-pointer">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={act.requireApproval}
+                                        onChange={(e) => setActivities(activities.map(a => a.id === act.id ? { ...a, requireApproval: e.target.checked } : a))}
+                                        className="rounded-none accent-black border-gray-300" 
+                                      />
+                                      <span className="font-bold text-gray-700">REQUIRES APPROVAL (Legacy)</span>
+                                    </label>
+                                  </div>
+
+                                  {act.type.startsWith('CUSTOM') && (
+                                    <div className="bg-slate-50 p-2 border border-slate-200 space-y-1.5 mt-1">
+                                      <span className="font-bold text-indigo-900 text-[8px] uppercase block">Required Submission Assets Checklist:</span>
+                                      <div className="flex flex-wrap items-center gap-4 text-[9px]">
+                                        <label className="flex items-center gap-1.5 cursor-pointer">
+                                          <input 
+                                            type="checkbox" 
+                                            checked={act.requiresCamera || false}
+                                            onChange={(e) => setActivities(activities.map(a => a.id === act.id ? { ...a, requiresCamera: e.target.checked } : a))}
+                                            className="rounded-none accent-black border-gray-300" 
+                                          />
+                                          <span className="font-bold text-slate-800 flex items-center gap-1">
+                                            <span>📸</span>
+                                            <span>Requires Cellphone Camera (Photo Snap)</span>
+                                          </span>
+                                        </label>
+                                        <label className="flex items-center gap-1.5 cursor-pointer">
+                                          <input 
+                                            type="checkbox" 
+                                            checked={act.requiresGallery || false}
+                                            onChange={(e) => setActivities(activities.map(a => a.id === act.id ? { ...a, requiresGallery: e.target.checked } : a))}
+                                            className="rounded-none accent-black border-gray-300" 
+                                          />
+                                          <span className="font-bold text-slate-800 flex items-center gap-1">
+                                            <span>📁</span>
+                                            <span>Requires Photo from Gallery</span>
+                                          </span>
+                                        </label>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ))}
                             {activities.length === 0 && (
                               <div className="py-8 text-center text-slate-500 text-[10px]">
-                                No activities configured. Initialize some in types.
+                                No activities configured. Initialize some or add custom ones.
                               </div>
                             )}
                           </div>
@@ -951,6 +1102,7 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
                             { key: 'SONG_REQUEST', label: 'Request Stage Band Song', color: 'border-amber-400 bg-amber-50/50' },
                             { key: 'STAFF_BEST_PHOTO', label: 'Award Staff Best Photo Pick', color: 'border-indigo-400 bg-indigo-50/50' },
                             { key: 'STAFF_ACTIVE', label: 'Custom Active Staff Award', color: 'border-teal-400 bg-teal-50/50' },
+                            { key: 'NETWORKING', label: 'Networking Connection Scan', color: 'border-yellow-400 bg-yellow-50/50' },
                             { key: 'CUSTOM', label: 'Spot General Admin Award', color: 'border-neutral-400 bg-neutral-50/50' }
                           ].map((rule) => (
                             <div key={rule.key} className={`border p-3 space-y-1.5 flex flex-col justify-between ${rule.color}`}>

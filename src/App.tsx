@@ -4,6 +4,7 @@ import RegistrationPortal from './components/RegistrationPortal';
 import CheckInStation from './components/CheckInStation';
 import LuckyDraw from './components/LuckyDraw';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
+import SponsorBoothManager from './components/SponsorBoothManager';
 import SuperAdminPanel from './components/SuperAdminPanel';
 import InvitationManager from './components/InvitationManager';
 import EventPlanner from './components/EventPlanner';
@@ -11,7 +12,7 @@ import LeaderboardSprintPage from '../sprint-9-leaderboard/frontend/src/app/lead
 import DoorPrizeSprintPage from '../sprint-10-doorprize/frontend/src/app/doorprize/page';
 import LuckyDrawSprintPage from '../sprint-11-luckydraw/frontend/src/app/luckydraw/page';
 import { Participant, SongRequest, ActivitySubmission, LuckyDrawWinner, AuditLog, EventConfig, DoorPrizeCategory, LuckyDrawCategory } from './types';
-import { Calendar, MapPin, Award, Users, ShieldAlert, FileText, Settings, Play, Trophy, Gift, Sliders } from 'lucide-react';
+import { Calendar, MapPin, Award, Users, ShieldAlert, FileText, Settings, Play, Trophy, Gift, Sliders, Sparkles } from 'lucide-react';
 
 export default function App() {
   const [activeRole, setActiveRole] = useState<'ADMIN' | 'MANAGER' | 'STAFF' | 'PARTICIPANT'>('MANAGER');
@@ -31,7 +32,7 @@ export default function App() {
   const [selectedParticipantId, setSelectedParticipantId] = useState<string>('');
 
   // Manager sub-tabs selection state
-  const [managerSubTab, setManagerSubTab] = useState<'PLANNER' | 'ANALYTICS' | 'INVITATIONS' | 'LUCKY_DRAW' | 'LEADERBOARD' | 'DOOR_PRIZE'>('PLANNER');
+  const [managerSubTab, setManagerSubTab] = useState<'PLANNER' | 'ANALYTICS' | 'INVITATIONS' | 'LUCKY_DRAW' | 'LEADERBOARD' | 'DOOR_PRIZE' | 'SPONSORS'>('PLANNER');
 
 
   // Refresh states
@@ -303,6 +304,16 @@ export default function App() {
                 <FileText className="w-3.5 h-3.5" />
                 <span>01 Live Analytics</span>
               </button>
+
+              <button
+                onClick={() => setManagerSubTab('SPONSORS')}
+                className={`flex-1 py-2 px-3 text-[10px] font-mono uppercase font-black rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                  managerSubTab === 'SPONSORS' ? 'bg-[#141414] text-[#E4E3E0]' : 'text-[#141414] hover:bg-[#CFCECA]'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
+                <span>02 Sponsor Booths</span>
+              </button>
               
               <button
                 onClick={() => setManagerSubTab('INVITATIONS')}
@@ -311,7 +322,7 @@ export default function App() {
                 }`}
               >
                 <Settings className="w-3.5 h-3.5" />
-                <span>02 RSVPs & Reminders</span>
+                <span>03 RSVPs & Reminders</span>
               </button>
               
               <button
@@ -321,7 +332,7 @@ export default function App() {
                 }`}
               >
                 <Play className="w-3.5 h-3.5" />
-                <span>03 Lucky Draw Wheel</span>
+                <span>04 Lucky Draw Wheel</span>
               </button>
 
               <button
@@ -331,7 +342,7 @@ export default function App() {
                 }`}
               >
                 <Trophy className="w-3.5 h-3.5" />
-                <span>04 Leaderboard & Swag</span>
+                <span>05 Leaderboard & Swag</span>
               </button>
 
               <button
@@ -341,7 +352,7 @@ export default function App() {
                 }`}
               >
                 <Gift className="w-3.5 h-3.5 text-[#00FF00]" />
-                <span>05 Door Prizes</span>
+                <span>06 Door Prizes</span>
               </button>
             </div>
 
@@ -360,6 +371,10 @@ export default function App() {
                 activitySubmissions={activitySubmissions}
                 doorPrizes={doorPrizes}
               />
+            )}
+
+            {managerSubTab === 'SPONSORS' && (
+              <SponsorBoothManager />
             )}
 
             {managerSubTab === 'INVITATIONS' && (

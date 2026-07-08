@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   QrCode, Ticket, Sparkles, Send, Music, Image as ImageIcon, MessageSquare, 
   Award, CheckCircle2, AlertCircle, Camera, Check, Calendar, MapPin, ExternalLink,
-  Upload, Shield, Lock, User, Briefcase, FileText, Utensils, Shirt, LogIn, UserPlus, LogOut 
+  Upload, Shield, Lock, User, Users, Briefcase, FileText, Utensils, Shirt, LogIn, UserPlus, LogOut, CheckSquare, Scan 
 } from 'lucide-react';
-import { Participant, SongRequest, ActivitySubmission, EventConfig } from '../types';
+import { Participant, SongRequest, ActivitySubmission, EventConfig, BoothVisit, NetworkingConnection } from '../types';
 
 interface RegistrationPortalProps {
   currentParticipant: Participant | undefined;
@@ -75,7 +75,136 @@ export default function RegistrationPortal({
   const [showRsvpSuccess, setShowRsvpSuccess] = useState(false);
 
   // Tab state in Participant View
-  const [activeTab, setActiveTab] = useState<'PASS' | 'ACTIVITIES' | 'SONGS' | 'LEADERBOARD' | 'PROFILE'>('PASS');
+  const [activeTab, setActiveTab] = useState<'PASS' | 'ACTIVITIES' | 'SONGS' | 'LEADERBOARD' | 'PROFILE' | 'SPONSORS' | 'NETWORKING'>('PASS');
+
+  // Sponsor Booth States
+  const [visitedBooths, setVisitedBooths] = useState<BoothVisit[]>([]);
+  const [boothScanCode, setBoothScanCode] = useState('');
+  const [boothScanError, setBoothScanError] = useState('');
+  const [boothScanSuccess, setBoothScanSuccess] = useState('');
+  const [isScanningBooth, setIsScanningBooth] = useState(false);
+  const [isSubmittingBoothScan, setIsSubmittingBoothScan] = useState(false);
+
+  // Networking Challenge States
+  const [connections, setConnections] = useState<NetworkingConnection[]>([]);
+  const [networkingScanCode, setNetworkingScanCode] = useState('');
+  const [networkingError, setNetworkingError] = useState('');
+  const [networkingSuccess, setNetworkingSuccess] = useState('');
+  const [isSubmittingNetworking, setIsSubmittingNetworking] = useState(false);
+
+  const loadNetworkingConnections = async () => {
+    if (!currentParticipant) return;
+    try {
+      const res = await fetch('/api/networking/connections');
+      if (res.ok) {
+        const data: NetworkingConnection[] = await res.json();
+        // Filter connections where current user is either from or to
+        const userConnections = data.filter(c => 
+          c.fromParticipantId === currentParticipant.id || c.toParticipantId === currentParticipant.id
+        );
+        setConnections(userConnections);
+      }
+    } catch (err) {
+      console.error("Failed to load networking connections:", err);
+    }
+  };
+
+  const handleNetworkingConnect = async (code: string) => {
+    if (!currentParticipant) return;
+    if (!code || !code.trim()) {
+      setNetworkingError("Please enter a valid participant ID or QR Code signature.");
+      return;
+    }
+
+    setIsSubmittingNetworking(true);
+    setNetworkingError('');
+    setNetworkingSuccess('');
+
+    try {
+      const res = await fetch('/api/networking/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromParticipantId: currentParticipant.id,
+          targetCode: code.trim()
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setNetworkingError(data.error || "Failed to connect.");
+      } else {
+        setNetworkingSuccess(`Successfully connected with ${data.targetParticipantName}! You both earned +${data.pointsAwarded} PTS.`);
+        setNetworkingScanCode('');
+        // Reload participant data
+        onSelectParticipant(currentParticipant.id);
+        await loadNetworkingConnections();
+      }
+    } catch (err) {
+      setNetworkingError("A connection error occurred. Please try again.");
+    } finally {
+      setIsSubmittingNetworking(false);
+    }
+  };
+
+  const loadBoothVisits = async () => {
+    if (!currentParticipant) return;
+    try {
+      const res = await fetch('/api/sponsor-booth/visits');
+      if (res.ok) {
+        const data: BoothVisit[] = await res.json();
+        const userVisits = data.filter(v => v.participantId === currentParticipant.id);
+        setVisitedBooths(userVisits);
+      }
+    } catch (err) {
+      console.error("Failed to load booth visits:", err);
+    }
+  };
+
+  const handleSponsorBoothScan = async (code: string) => {
+    if (!currentParticipant) return;
+    if (!code || !code.trim()) {
+      setBoothScanError("Please enter a valid booth code.");
+      return;
+    }
+
+    setIsSubmittingBoothScan(true);
+    setBoothScanError('');
+    setBoothScanSuccess('');
+
+    try {
+      const res = await fetch('/api/sponsor-booth/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          participantId: currentParticipant.id,
+          boothCode: code.trim()
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setBoothScanError(data.error || "Failed to scan booth.");
+      } else {
+        setBoothScanSuccess(`Successfully verified! Checked in at ${data.visit.boothName} and earned +${data.visit.pointsAwarded} PTS.`);
+        setBoothScanCode('');
+        // Reload participant data
+        onSelectParticipant(currentParticipant.id);
+        await loadBoothVisits();
+      }
+    } catch (err) {
+      setBoothScanError("A connection error occurred. Please try again.");
+    } finally {
+      setIsSubmittingBoothScan(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentParticipant) {
+      loadBoothVisits();
+      loadNetworkingConnections();
+    }
+  }, [currentParticipant, activeTab]);
 
   // Secure Ticking Clock for Screenshot Prevention
   const [secureTime, setSecureTime] = useState(new Date());
@@ -126,6 +255,7 @@ export default function RegistrationPortal({
   const [photoUploaded, setPhotoUploaded] = useState(false);
 
   const [instagramPostUrl, setInstagramPostUrl] = useState('');
+  const [instagramFilePreview, setInstagramFilePreview] = useState<string | null>(null);
   const [instagramUploaded, setInstagramUploaded] = useState(false);
 
   const [songArtist, setSongArtist] = useState('');
@@ -243,14 +373,14 @@ export default function RegistrationPortal({
 
   const handleInstagramSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const url = instagramPostUrl.trim() || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&auto=format&fit=crop&q=80';
+    const url = instagramFilePreview || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&auto=format&fit=crop&q=80';
     try {
       await onSubmitActivity({
         activityType: 'INSTAGRAM_POST',
         description: 'Uploaded Instagram story post screenshot (#EventHub2026)',
         content: url
       });
-      setInstagramPostUrl('');
+      setInstagramFilePreview(null);
       setInstagramUploaded(true);
       setTimeout(() => setInstagramUploaded(false), 4000);
     } catch (err) {
@@ -911,10 +1041,10 @@ export default function RegistrationPortal({
           <div className="lg:col-span-8 space-y-6">
             
              {/* Participant Action Tabs Navigation */}
-            <div className="flex border-[1.5px] border-[#141414] bg-[#DFDEDA] p-1 rounded-none gap-1 font-mono">
+            <div className="flex flex-wrap border-[1.5px] border-[#141414] bg-[#DFDEDA] p-1 rounded-none gap-1 font-mono">
               <button
                 onClick={() => setActiveTab('PASS')}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
                   activeTab === 'PASS' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
                 }`}
               >
@@ -923,7 +1053,7 @@ export default function RegistrationPortal({
               </button>
               <button
                 onClick={() => setActiveTab('ACTIVITIES')}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
                   activeTab === 'ACTIVITIES' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
                 }`}
               >
@@ -931,8 +1061,28 @@ export default function RegistrationPortal({
                 <span>Earn Points ({currentParticipant.points} PTS)</span>
               </button>
               <button
+                onClick={() => setActiveTab('SPONSORS')}
+                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeTab === 'SPONSORS' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
+                <span>Sponsor Booths</span>
+              </button>
+              {eventConfig?.activities?.find(a => a.type === 'NETWORKING')?.isEnabled !== false && (
+                <button
+                  onClick={() => setActiveTab('NETWORKING')}
+                  className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                    activeTab === 'NETWORKING' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Networking</span>
+                </button>
+              )}
+              <button
                 onClick={() => setActiveTab('SONGS')}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
                   activeTab === 'SONGS' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
                 }`}
               >
@@ -941,7 +1091,7 @@ export default function RegistrationPortal({
               </button>
               <button
                 onClick={() => setActiveTab('LEADERBOARD')}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
                   activeTab === 'LEADERBOARD' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
                 }`}
               >
@@ -950,7 +1100,7 @@ export default function RegistrationPortal({
               </button>
               <button
                 onClick={() => setActiveTab('PROFILE')}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
                   activeTab === 'PROFILE' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
                 }`}
               >
@@ -1040,7 +1190,7 @@ export default function RegistrationPortal({
                         </div>
                         <div className="border-l-2 border-[#141414] pl-4 pb-2 group-last:border-transparent group-last:pb-0">
                           <h4 className="font-bold text-slate-900 uppercase">{item.activity}</h4>
-                          <p className="text-[10px] text-slate-500 mt-0.5 uppercase">Active session in main summit venue</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5 uppercase">{item.description || "Active session in main summit venue"}</p>
                         </div>
                       </div>
                     ))}
@@ -1091,146 +1241,319 @@ export default function RegistrationPortal({
                   Complete default and custom host activities below to instantly gain points. Approved submissions upgrade your Door Prize eligibility!
                 </div>
 
-                {/* Activity 1: Submit Feedback */}
-                <div className="tech-card p-5">
-                  <div className="flex justify-between items-start border-b border-[#141414] pb-3">
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2 uppercase">
-                        <MessageSquare className="w-4 h-4 text-black" />
-                        <span>01. Submit Event Feedback</span>
-                      </h4>
-                      <p className="text-[11px] text-slate-500 mt-0.5">Let the organizer know how we did. Auto-approved on submit.</p>
-                    </div>
-                    <span className="bg-[#00FF00] border border-black text-black font-bold text-xs px-2.5 py-1 rounded-none font-mono">+5 PTS</span>
-                  </div>
+                {/* Dynamic Activities Mapping */}
+                {eventConfig?.activities?.filter(a => a.isEnabled).map((act, index) => {
+                  const isSubmitted = 
+                    (act.type === 'FEEDBACK' && feedbackSubmitted) || 
+                    (act.type === 'PHOTO_UPLOAD' && photoUploaded) ||
+                    (act.type === 'INSTAGRAM_POST' && instagramUploaded);
 
-                  <form onSubmit={handleFeedbackSubmit} className="mt-4 space-y-3">
-                    <textarea
-                      value={feedback}
-                      onChange={(e) => setFeedback(e.target.value)}
-                      placeholder="Type your feedback here (minimum 10 characters)..."
-                      required
-                      rows={3}
-                      className="tech-input w-full font-mono text-xs p-3"
-                    ></textarea>
-                    
-                    <button
-                      type="submit"
-                      disabled={feedback.length < 10}
-                      className="btn-action-primary text-xs py-2 px-4 disabled:opacity-50"
-                    >
-                      Submit Feedback
-                    </button>
-                    
-                    {feedbackSubmitted && (
-                      <div className="text-xs text-[#141414] font-bold flex items-center gap-1.5 mt-2 bg-[#00FF00]/20 border border-black p-2 rounded-none">
-                        <Check className="w-4 h-4 text-[#141414] shrink-0" />
-                        <span>[APPROVED] Feedback logged! +5 points added to your score.</span>
+                  return (
+                    <div key={act.id} className="tech-card p-5">
+                      <div className="flex justify-between items-start border-b border-[#141414] pb-3">
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2 uppercase">
+                            <CheckSquare className="w-4 h-4 text-black" />
+                            <span>{String(index + 1).padStart(2, '0')}. {act.name}</span>
+                          </h4>
+                          <p className="text-[11px] text-slate-500 mt-0.5">{act.description}</p>
+                          {(act.startTime || act.endTime) && (
+                            <p className="text-[10px] text-indigo-700 font-bold mt-1 uppercase">Time: {act.startTime || 'Open'} - {act.endTime || 'End'}</p>
+                          )}
+                          <p className="text-[10px] text-slate-700 font-bold mt-1 uppercase border border-slate-300 inline-block px-1.5 py-0.5 bg-slate-50">
+                            Verification: {act.validationMethod || (act.requireApproval ? 'STAFF_APPROVAL' : 'AUTOMATIC')}
+                          </p>
+                        </div>
+                        <span className="bg-[#00FF00] border border-black text-black font-bold text-xs px-2.5 py-1 rounded-none font-mono">+{act.points} PTS</span>
                       </div>
-                    )}
-                  </form>
-                </div>
 
-                {/* Activity 2: Upload Event Photo */}
-                <div className="tech-card p-5">
-                  <div className="flex justify-between items-start border-b border-[#141414] pb-3">
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2 uppercase">
-                        <ImageIcon className="w-4 h-4 text-black" />
-                        <span>02. Share Event Photo</span>
-                      </h4>
-                      <p className="text-[11px] text-slate-500 mt-0.5">Snap and upload your best moment from today. Pending Staff review.</p>
-                    </div>
-                    <span className="bg-[#00FF00] border border-black text-black font-bold text-xs px-2.5 py-1 rounded-none font-mono">+5 PTS</span>
-                  </div>
-
-                  <div className="mt-4 space-y-4">
-                    {/* Preset Image Selection block for easy simulator usage */}
-                    <div className="space-y-2">
-                      <span className="text-[9px] font-bold uppercase text-slate-500 block">Or Simulate Camera Photo Snap:</span>
-                      <div className="grid grid-cols-3 gap-2">
-                        {PRESET_EVENT_PHOTOS.map((photo, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setSelectedPhotoPreset(photo.url)}
-                            className={`relative h-20 rounded-none overflow-hidden border-[1.5px] transition-transform hover:scale-[1.02] cursor-pointer ${
-                              selectedPhotoPreset === photo.url ? 'border-black ring-2 ring-black' : 'border-[#141414]'
-                            }`}
-                          >
-                            <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white text-[8px] font-bold p-1 truncate">
-                              {photo.name}
+                      <div className="mt-4">
+                        {act.type === 'FEEDBACK' ? (
+                          <form onSubmit={handleFeedbackSubmit} className="space-y-3">
+                            <textarea
+                              value={feedback}
+                              onChange={(e) => setFeedback(e.target.value)}
+                              placeholder="Type your feedback here (minimum 10 characters)..."
+                              required
+                              rows={3}
+                              className="tech-input w-full font-mono text-xs p-3"
+                            ></textarea>
+                            <button
+                              type="submit"
+                              disabled={feedback.length < 10}
+                              className="btn-action-primary text-xs py-2 px-4 disabled:opacity-50"
+                            >
+                              Submit Feedback
+                            </button>
+                            {feedbackSubmitted && (
+                              <div className="text-xs text-[#141414] font-bold flex items-center gap-1.5 mt-2 bg-[#00FF00]/20 border border-black p-2 rounded-none">
+                                <Check className="w-4 h-4 text-[#141414] shrink-0" />
+                                <span>[APPROVED] Feedback logged! +{act.points} points added.</span>
+                              </div>
+                            )}
+                          </form>
+                        ) : act.type === 'PHOTO_UPLOAD' ? (
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <span className="text-[9px] font-bold uppercase text-slate-500 block">Or Simulate Camera Photo Snap:</span>
+                              <div className="grid grid-cols-3 gap-2">
+                                {PRESET_EVENT_PHOTOS.map((photo, i) => (
+                                  <button
+                                    key={i}
+                                    onClick={() => setSelectedPhotoPreset(photo.url)}
+                                    className={`relative h-20 rounded-none overflow-hidden border-[1.5px] transition-transform hover:scale-[1.02] cursor-pointer ${
+                                      selectedPhotoPreset === photo.url ? 'border-black ring-2 ring-black' : 'border-[#141414]'
+                                    }`}
+                                  >
+                                    <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white text-[8px] font-bold p-1 truncate">
+                                      {photo.name}
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
                             </div>
-                          </button>
-                        ))}
+                            <div className="flex flex-col gap-3">
+                              <div>
+                                <label className="text-[9px] font-bold text-slate-500 uppercase block mb-2">Upload or Take Photo</label>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  capture="environment"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      const reader = new FileReader();
+                                      reader.onload = (evt) => {
+                                        setCustomPhotoUrl(evt.target?.result as string);
+                                        setSelectedPhotoPreset(null);
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }}
+                                  className="text-xs w-full mb-2 border border-slate-300 p-1 bg-slate-50"
+                                />
+                                {customPhotoUrl && customPhotoUrl.startsWith('data:image') && (
+                                  <div className="h-32 mb-2 bg-slate-100 border border-slate-300 flex items-center justify-center overflow-hidden">
+                                    <img src={customPhotoUrl} alt="Preview" className="max-h-full max-w-full object-contain" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="Or input custom Photo image URL directly..."
+                                  value={customPhotoUrl}
+                                  onChange={(e) => { setCustomPhotoUrl(e.target.value); setSelectedPhotoPreset(null); }}
+                                  className="tech-input flex-1 text-xs"
+                                />
+                                <button
+                                  onClick={() => handlePhotoUploadSubmit(selectedPhotoPreset || customPhotoUrl)}
+                                  disabled={!selectedPhotoPreset && !customPhotoUrl}
+                                  className="btn-action-primary text-xs py-1.5 px-4 disabled:opacity-50 shrink-0"
+                                >
+                                  Submit Photo Proof
+                                </button>
+                              </div>
+                            </div>
+                            {photoUploaded && (
+                              <div className="text-xs text-[#141414] font-bold bg-[#DFDEDA] border border-[#141414] p-2.5 rounded-none flex items-center gap-1.5 mt-2">
+                                <AlertCircle className="w-4 h-4 text-black shrink-0" />
+                                <span>[SUBMITTED] Photo proof uploaded! Pending Staff review.</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : act.type === 'INSTAGRAM_POST' ? (
+                          <form onSubmit={handleInstagramSubmit} className="space-y-4">
+                            <div className="space-y-2">
+                              <label className="text-[9px] font-bold text-slate-500 uppercase block">
+                                Choose Instagram Story Screenshot from Gallery
+                              </label>
+                              
+                              <div className="flex flex-col items-center justify-center border-[1.5px] border-dashed border-[#141414] p-5 bg-white relative">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  id="instagram-screenshot-upload"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      const reader = new FileReader();
+                                      reader.onload = (evt) => {
+                                        setInstagramFilePreview(evt.target?.result as string);
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }}
+                                />
+                                
+                                {instagramFilePreview ? (
+                                  <div className="w-full flex flex-col items-center gap-3">
+                                    <div className="w-40 h-40 border border-slate-300 overflow-hidden relative group">
+                                      <img src={instagramFilePreview} alt="Screenshot preview" className="w-full h-full object-cover" />
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setInstagramFilePreview(null);
+                                        }}
+                                        className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[#E4E3E0] font-mono text-[9px] font-bold cursor-pointer"
+                                      >
+                                        CHANGE SCREENSHOT
+                                      </button>
+                                    </div>
+                                    <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 font-mono uppercase">
+                                      <CheckCircle2 className="w-3.5 h-3.5" /> Screenshot Selected
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <label
+                                    htmlFor="instagram-screenshot-upload"
+                                    className="cursor-pointer flex flex-col items-center justify-center gap-2 py-4 w-full text-center"
+                                  >
+                                    <ImageIcon className="w-8 h-8 text-slate-400" />
+                                    <span className="btn-action-refresh text-[10px] h-8 font-black uppercase">
+                                      <Upload className="w-3.5 h-3.5" /> ACCESS PHONE GALLERY
+                                    </span>
+                                    <span className="text-[8px] text-slate-400 mt-1 uppercase font-bold tracking-wider">
+                                      Select image from library or files
+                                    </span>
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <button
+                              type="submit"
+                              className="btn-action-primary text-xs py-1.5 px-4 w-full"
+                            >
+                              Submit Story Proof
+                            </button>
+                            
+                            {instagramUploaded && (
+                              <div className="text-xs text-[#141414] font-bold bg-[#DFDEDA] border border-[#141414] p-2.5 rounded-none flex items-center gap-1.5 mt-2">
+                                <AlertCircle className="w-4 h-4 text-black shrink-0" />
+                                <span>[SUBMITTED] Instagram screenshot submitted! Pending Staff approval.</span>
+                              </div>
+                            )}
+                          </form>
+                        ) : (
+                          <form 
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const input = e.currentTarget.elements.namedItem('customInput') as HTMLInputElement;
+                              const cameraInput = e.currentTarget.elements.namedItem('cameraInput') as HTMLInputElement;
+                              const galleryInput = e.currentTarget.elements.namedItem('galleryInput') as HTMLInputElement;
+                              const fileInput = e.currentTarget.elements.namedItem('fileInput') as HTMLInputElement;
+                              
+                              const file = cameraInput?.files?.[0] || galleryInput?.files?.[0] || fileInput?.files?.[0];
+
+                              const doSubmit = (contentStr: string) => {
+                                onSubmitActivity({
+                                  activityType: act.type,
+                                  description: `${act.name}: ${input?.value || (contentStr.startsWith('data:image') ? 'Uploaded Photo' : 'Completed')}`,
+                                  content: contentStr
+                                });
+                                if (input) input.value = '';
+                                if (cameraInput) cameraInput.value = '';
+                                if (galleryInput) galleryInput.value = '';
+                                if (fileInput) fileInput.value = '';
+                                alert(`Activity "${act.name}" submitted!`);
+                              };
+
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (evt) => {
+                                  doSubmit(evt.target?.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                              } else {
+                                doSubmit(input?.value || '');
+                              }
+                            }} 
+                            className="space-y-4"
+                          >
+                            {act.validationMethod === 'GPS' ? (
+                              <div className="bg-slate-100 p-3 border border-slate-300 text-[10px] text-slate-600 space-y-2">
+                                <div className="flex items-center gap-2 text-slate-800 font-bold uppercase"><MapPin className="w-3.5 h-3.5" /> <span>GPS Verification Required</span></div>
+                                <p>This activity requires you to be at the physical location. Click below to verify.</p>
+                                <button type="button" onClick={() => alert("Mock GPS Verification: You are at the correct location!")} className="btn-action-secondary text-[10px] py-1 px-3">Verify My Location</button>
+                              </div>
+                            ) : act.validationMethod === 'QR_SCAN' ? (
+                              <div className="bg-slate-100 p-3 border border-slate-300 text-[10px] text-slate-600 space-y-2">
+                                <div className="flex items-center gap-2 text-slate-800 font-bold uppercase"><Scan className="w-3.5 h-3.5" /> <span>QR Code Scan Required</span></div>
+                                <p>Find the activity QR code on-site and scan it to complete.</p>
+                                <button type="button" onClick={() => alert("Mock QR Scanner Opened.")} className="btn-action-secondary text-[10px] py-1 px-3">Open Camera Scanner</button>
+                              </div>
+                            ) : (
+                              <div>
+                                {act.requiresCamera && (
+                                  <div className="mb-3">
+                                    <label className="text-[9px] font-bold text-red-600 uppercase block mb-1">
+                                      📸 Take Picture (Cellphone Camera - REQUIRED)
+                                    </label>
+                                    <input
+                                      type="file"
+                                      name="cameraInput"
+                                      accept="image/*"
+                                      capture="environment"
+                                      required
+                                      className="text-xs w-full border border-red-300 p-1 bg-red-50/50"
+                                    />
+                                  </div>
+                                )}
+
+                                {act.requiresGallery && (
+                                  <div className="mb-3">
+                                    <label className="text-[9px] font-bold text-blue-600 uppercase block mb-1">
+                                      📁 Upload Photo (Gallery - REQUIRED)
+                                    </label>
+                                    <input
+                                      type="file"
+                                      name="galleryInput"
+                                      accept="image/*"
+                                      required
+                                      className="text-xs w-full border border-blue-300 p-1 bg-blue-50/50"
+                                    />
+                                  </div>
+                                )}
+
+                                {!act.requiresCamera && !act.requiresGallery && (
+                                  <div className="mb-3">
+                                    <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Upload Photo (Optional)</label>
+                                    <input
+                                      type="file"
+                                      name="fileInput"
+                                      accept="image/*"
+                                      capture="environment"
+                                      className="text-xs w-full border border-slate-300 p-1 bg-slate-50"
+                                    />
+                                  </div>
+                                )}
+
+                                <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Proof / Submission details (Optional)</label>
+                                <input
+                                  type="text"
+                                  name="customInput"
+                                  placeholder="Enter text or URL proof..."
+                                  className="tech-input w-full text-xs"
+                                />
+                              </div>
+                            )}
+                            
+                            <button
+                              type="submit"
+                              className="btn-action-primary text-xs py-1.5 px-4"
+                            >
+                              Submit Activity
+                            </button>
+                          </form>
+                        )}
                       </div>
                     </div>
-
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Or input custom Photo image URL directly..."
-                        value={customPhotoUrl}
-                        onChange={(e) => setCustomPhotoUrl(e.target.value)}
-                        className="tech-input flex-1 text-xs"
-                      />
-                      <button
-                        onClick={() => handlePhotoUploadSubmit(selectedPhotoPreset || customPhotoUrl)}
-                        disabled={!selectedPhotoPreset && !customPhotoUrl}
-                        className="btn-action-primary text-xs py-1.5 px-4 disabled:opacity-50 shrink-0"
-                      >
-                        Submit Photo Proof
-                      </button>
-                    </div>
-
-                    {photoUploaded && (
-                      <div className="text-xs text-[#141414] font-bold bg-[#DFDEDA] border border-[#141414] p-2.5 rounded-none flex items-center gap-1.5 mt-2">
-                        <AlertCircle className="w-4 h-4 text-black shrink-0" />
-                        <span>[SUBMITTED] Photo proof uploaded! Points will be awarded upon Event Staff approval.</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Activity 3: Upload Instagram Story Post Screenshot */}
-                <div className="tech-card p-5">
-                  <div className="flex justify-between items-start border-b border-[#141414] pb-3">
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2 uppercase">
-                        <Award className="w-4 h-4 text-black" />
-                        <span>03. Instagram Post Screenshot</span>
-                      </h4>
-                      <p className="text-[11px] text-slate-500 mt-0.5">Share your experience on IG using #EventHub2026. Pending Staff review.</p>
-                    </div>
-                    <span className="bg-[#00FF00] border border-black text-black font-bold text-xs px-2.5 py-1 rounded-none font-mono">+5 PTS</span>
-                  </div>
-
-                  <form onSubmit={handleInstagramSubmit} className="mt-4 space-y-4">
-                    <div>
-                      <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Simulate upload screenshot URL</label>
-                      <input
-                        type="text"
-                        placeholder="Leave blank to submit mock screenshot proof"
-                        value={instagramPostUrl}
-                        onChange={(e) => setInstagramPostUrl(e.target.value)}
-                        className="tech-input w-full text-xs"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="btn-action-primary text-xs py-1.5 px-4"
-                    >
-                      Submit Story Proof
-                    </button>
-
-                    {instagramUploaded && (
-                      <div className="text-xs text-[#141414] font-bold bg-[#DFDEDA] border border-[#141414] p-2.5 rounded-none flex items-center gap-1.5 mt-2">
-                        <AlertCircle className="w-4 h-4 text-black shrink-0" />
-                        <span>[SUBMITTED] Instagram screenshot submitted! Points will be added upon Staff approval.</span>
-                      </div>
-                    )}
-                  </form>
-                </div>
+                  );
+                })}
               </div>
             )}
 
@@ -1655,6 +1978,443 @@ export default function RegistrationPortal({
                     <span>Save Profile Changes</span>
                   </button>
                 </form>
+              </div>
+            )}
+
+            {/* TAB CONTENT: Sponsor Booth Scanning & Progress */}
+            {activeTab === 'SPONSORS' && (
+              <div className="space-y-6">
+                
+                {/* Header Card */}
+                <div className="tech-card p-6 font-mono space-y-4">
+                  <div className="border-b border-[#141414] pb-3 flex justify-between items-center">
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-sm uppercase">Sponsor Booth Explorer</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Visit our corporate partners, scan their booth QR Codes, and claim bonus event points!</p>
+                    </div>
+                    <Sparkles className="w-5 h-5 text-yellow-500 fill-yellow-500 animate-pulse" />
+                  </div>
+
+                  {/* Stats Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-slate-50 p-3 border border-[#141414] rounded-none">
+                      <span className="text-slate-500 text-[9px] uppercase font-bold tracking-wider block">Booths Visited</span>
+                      <span className="text-base font-black text-slate-900">
+                        {visitedBooths.length} / {(eventConfig?.sponsorBooths || []).length}
+                      </span>
+                      <div className="w-full bg-slate-200 h-1.5 mt-1.5 border border-slate-300">
+                        <div 
+                          className="bg-emerald-500 h-full transition-all duration-300" 
+                          style={{ 
+                            width: `${(eventConfig?.sponsorBooths || []).length > 0 
+                              ? (visitedBooths.length / (eventConfig?.sponsorBooths || []).length) * 100 
+                              : 0}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 p-3 border border-[#141414] rounded-none">
+                      <span className="text-slate-500 text-[9px] uppercase font-bold tracking-wider block">Sponsor Points Earned</span>
+                      <span className="text-base font-black text-indigo-900">
+                        +{visitedBooths.reduce((sum, v) => sum + v.pointsAwarded, 0)} PTS
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-50 p-3 border border-[#141414] rounded-none">
+                      <span className="text-slate-500 text-[9px] uppercase font-bold tracking-wider block">Visit Status</span>
+                      <span className="text-xs font-bold text-slate-700 block mt-1">
+                        {visitedBooths.length === (eventConfig?.sponsorBooths || []).length && (eventConfig?.sponsorBooths || []).length > 0 ? (
+                          <span className="text-emerald-700 flex items-center gap-1">✓ Completed All Booths!</span>
+                        ) : (
+                          <span className="text-indigo-600">Keep scanning to level up!</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Main QR Simulation / Manual Scan Form Card */}
+                <div className="tech-card p-6 font-mono space-y-4">
+                  <h4 className="font-bold text-[#141414] uppercase text-[10px] tracking-widest border-b border-slate-200 pb-1 flex items-center gap-1.5">
+                    <Scan className="w-4 h-4 text-indigo-600" />
+                    <span>[ Sponsor QR Code Verification Portal ]</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                    
+                    {/* Left side: Animated simulated QR camera view */}
+                    <div className="md:col-span-5 bg-black border-[1.5px] border-[#141414] aspect-square relative flex flex-col items-center justify-center p-4 overflow-hidden">
+                      <div className="absolute inset-0 bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:16px_16px] opacity-40" />
+                      
+                      {/* Scan Lines and Overlay */}
+                      <div className="absolute w-full h-0.5 bg-green-500/80 top-1/2 left-0 shadow-[0_0_8px_rgba(34,197,94,0.8)] z-10" />
+                      <div className="w-36 h-36 border-2 border-dashed border-green-500 relative flex items-center justify-center">
+                        <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-green-400" />
+                        <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-green-400" />
+                        <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-green-400" />
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-green-400" />
+                        
+                        <QrCode className="w-16 h-16 text-slate-800 animate-pulse" />
+                      </div>
+
+                      <div className="mt-4 text-[9px] text-green-400 uppercase tracking-widest font-mono z-10 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
+                        <span>Simulated Lens Active</span>
+                      </div>
+                    </div>
+
+                    {/* Right side: Manual input / interactive selection */}
+                    <div className="md:col-span-7 space-y-4">
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        To claim points, point your cellphone camera at the sponsor's custom-printed QR code on their counter, or select a nearby booth below to simulate a live physical scan.
+                      </p>
+
+                      {/* Scan Feedback */}
+                      {boothScanError && (
+                        <div className="p-3 bg-red-100 border-[1.5px] border-red-900 text-red-900 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-red-700 shrink-0" />
+                          <span>{boothScanError}</span>
+                        </div>
+                      )}
+
+                      {boothScanSuccess && (
+                        <div className="p-3 bg-emerald-100 border-[1.5px] border-emerald-900 text-emerald-950 text-xs flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                          <span>{boothScanSuccess}</span>
+                        </div>
+                      )}
+
+                      {/* Manual Code Input Form */}
+                      <form 
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleSponsorBoothScan(boothScanCode);
+                        }} 
+                        className="space-y-2"
+                      >
+                        <label className="text-[9px] font-bold text-slate-500 uppercase block">Enter Booth ID or Code Manually</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={boothScanCode}
+                            onChange={(e) => setBoothScanCode(e.target.value.toUpperCase())}
+                            placeholder="e.g. BOOTH-101"
+                            className="flex-1 bg-white border-[1.5px] border-[#141414] py-2 px-3 text-xs uppercase focus:outline-none font-bold"
+                          />
+                          <button
+                            type="submit"
+                            disabled={isSubmittingBoothScan || !boothScanCode.trim()}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 text-xs border-[1.5px] border-black disabled:bg-slate-300 disabled:border-slate-300 transition-colors uppercase cursor-pointer"
+                          >
+                            {isSubmittingBoothScan ? "Verifying..." : "Verify Code"}
+                          </button>
+                        </div>
+                      </form>
+
+                      {/* Simulated Interactive Scan Shortcuts */}
+                      {eventConfig?.sponsorBooths && eventConfig.sponsorBooths.length > 0 && (
+                        <div className="pt-2 border-t border-slate-200">
+                          <span className="text-[9px] font-bold text-slate-500 uppercase block mb-1.5">Interactive Demo Simulator:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {eventConfig.sponsorBooths.map(b => {
+                              const alreadyVisited = visitedBooths.some(v => v.boothId === b.id);
+                              return (
+                                <button
+                                  key={b.id}
+                                  type="button"
+                                  disabled={alreadyVisited || isSubmittingBoothScan}
+                                  onClick={() => handleSponsorBoothScan(b.boothCode)}
+                                  className={`px-2.5 py-1.5 text-[10px] font-bold border transition-all flex items-center gap-1 ${
+                                    alreadyVisited 
+                                      ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
+                                      : "bg-indigo-50 text-indigo-950 border-indigo-300 hover:bg-indigo-100 cursor-pointer"
+                                  }`}
+                                  title={alreadyVisited ? "Already scanned" : `Scan booth ${b.name}`}
+                                >
+                                  <span>📲</span>
+                                  <span>Scan {b.name} ({b.boothCode})</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booths Directory List */}
+                <div className="space-y-3">
+                  <h4 className="font-bold text-slate-900 uppercase text-[10px] tracking-widest px-1">[ Exhibitor & Sponsor Booth Directory ]</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(eventConfig?.sponsorBooths || []).map((b) => {
+                      const visitRecord = visitedBooths.find(v => v.boothId === b.id);
+                      const isVisited = !!visitRecord;
+
+                      return (
+                        <div 
+                          key={b.id} 
+                          className={`border-[1.5px] p-4 flex flex-col justify-between font-mono relative transition-all ${
+                            isVisited 
+                              ? "bg-emerald-50/70 border-emerald-700/50" 
+                              : "bg-white border-[#141414] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                          }`}
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between items-start gap-2">
+                              <span className="text-xs font-black text-slate-900 uppercase tracking-tight block">{b.name}</span>
+                              <span className="bg-slate-100 text-slate-800 text-[8px] font-black font-mono border border-slate-300 px-1.5 py-0.5 uppercase tracking-wider shrink-0">
+                                {b.boothCode}
+                              </span>
+                            </div>
+
+                            <p className="text-[11px] text-slate-600">
+                              <span className="font-bold">Location:</span> {b.locationDescription || "Main Corridor"}
+                            </p>
+                          </div>
+
+                          <div className="mt-4 pt-3 border-t border-dotted border-slate-300 flex justify-between items-center gap-2">
+                            <span className="text-[10px] font-black text-slate-700">
+                              Reward: <span className="text-indigo-600">+{b.pointsReward} PTS</span>
+                            </span>
+
+                            {isVisited ? (
+                              <div className="flex flex-col items-end">
+                                <span className="text-[9px] font-bold text-emerald-700 flex items-center gap-1 bg-emerald-100 border border-emerald-300 px-2 py-0.5 uppercase">
+                                  ✓ Visited
+                                </span>
+                                <span className="text-[8px] text-slate-400 mt-1">
+                                  {new Date(visitRecord.visitedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleSponsorBoothScan(b.boothCode)}
+                                className="bg-slate-100 hover:bg-slate-200 border border-slate-400 text-slate-800 text-[10px] uppercase font-bold py-1 px-3 transition-colors cursor-pointer"
+                              >
+                                Scan Code
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {(eventConfig?.sponsorBooths || []).length === 0 && (
+                      <div className="col-span-2 text-center py-8 bg-slate-50 border border-dashed border-slate-300 text-slate-500 font-mono text-xs">
+                        No sponsor booths configured for this event.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* TAB CONTENT: Networking Challenge */}
+            {activeTab === 'NETWORKING' && eventConfig?.activities?.find(a => a.type === 'NETWORKING')?.isEnabled !== false && (
+              <div className="space-y-6">
+                {/* Header Card */}
+                <div className="tech-card p-6 font-mono space-y-4">
+                  <div className="border-b border-[#141414] pb-3 flex justify-between items-center">
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-sm uppercase">Networking Challenge</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Exchange QR codes with other attendees to earn customizable points, build your professional network, and rise on the leaderboard!
+                      </p>
+                    </div>
+                    <Users className="w-5 h-5 text-indigo-600 fill-indigo-100 animate-pulse" />
+                  </div>
+
+                  {/* Stats Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-slate-50 p-3 border border-[#141414] rounded-none">
+                      <span className="text-slate-500 text-[9px] uppercase font-bold tracking-wider block">Connections Made</span>
+                      <span className="text-base font-black text-slate-900">
+                        {connections.length} people
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-50 p-3 border border-[#141414] rounded-none">
+                      <span className="text-slate-500 text-[9px] uppercase font-bold tracking-wider block">Networking Points</span>
+                      <span className="text-base font-black text-emerald-700">
+                        +{connections.reduce((sum, c) => sum + (c.pointsAwarded || 15), 0)} PTS
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-50 p-3 border border-[#141414] rounded-none">
+                      <span className="text-slate-500 text-[9px] uppercase font-bold tracking-wider block">Challenge Status</span>
+                      <span className="text-xs font-bold text-slate-700 block mt-1">
+                        {connections.length >= 5 ? (
+                          <span className="text-emerald-700 flex items-center gap-1">✓ Elite Networker! (+Bonus)</span>
+                        ) : (
+                          <span className="text-indigo-600">Connect with {Math.max(1, 5 - connections.length)} more for Elite badge!</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Main QR Simulation / Manual Scan Form Card */}
+                <div className="tech-card p-6 font-mono grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                  <div className="md:col-span-4 bg-slate-50 border border-slate-300 p-4 flex flex-col items-center justify-center text-center aspect-square rounded-none">
+                    <div className="w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-slate-400 p-2 relative group overflow-hidden">
+                      <QrCode className="w-16 h-16 text-slate-800 animate-pulse" />
+                      <div className="absolute inset-0 bg-slate-950/80 text-white flex flex-col items-center justify-center p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Scan className="w-8 h-8 text-[#00FF00] animate-bounce mb-2" />
+                        <span className="text-[10px] font-bold uppercase">Simulator Active</span>
+                      </div>
+                      <span className="text-[10px] font-black text-slate-600 mt-2 uppercase tracking-wide">Scan QR Code</span>
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-8 space-y-4">
+                    <div>
+                      <h4 className="font-bold text-xs uppercase text-slate-900 flex items-center gap-1.5">
+                        <span>[ Attendee Connection Portal ]</span>
+                      </h4>
+                      <p className="text-[10px] text-slate-500 leading-relaxed mt-1">
+                        To claim networking points, point your cellphone camera at another attendee's digital badge QR code, or enter their custom badge code manually below.
+                      </p>
+                    </div>
+
+                    {/* Scan feedback */}
+                    {networkingError && (
+                      <div className="bg-red-50 border border-red-300 text-red-900 px-3 py-2 text-[10px] font-bold flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                        <span>{networkingError}</span>
+                      </div>
+                    )}
+
+                    {networkingSuccess && (
+                      <div className="bg-emerald-50 border border-emerald-300 text-emerald-950 px-3 py-2 text-[10px] font-bold flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>{networkingSuccess}</span>
+                      </div>
+                    )}
+
+                    <form 
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        handleNetworkingConnect(networkingScanCode);
+                      }}
+                      className="flex gap-2"
+                    >
+                      <input 
+                        type="text"
+                        value={networkingScanCode}
+                        onChange={(e) => setNetworkingScanCode(e.target.value)}
+                        placeholder="e.g. EH-1002 or QRSIGN_xxx"
+                        className="flex-1 tech-input text-xs font-bold font-mono py-2 bg-white"
+                        disabled={isSubmittingNetworking}
+                      />
+                      <button
+                        type="submit"
+                        disabled={isSubmittingNetworking || !networkingScanCode.trim()}
+                        className="btn-action-primary text-xs font-black uppercase tracking-wider py-2 px-4 shrink-0 transition-all disabled:opacity-50"
+                      >
+                        {isSubmittingNetworking ? 'Verifying...' : 'Connect'}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Grid Lists */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
+                  {/* Left Column: My Network */}
+                  <div className="tech-card p-4 font-mono space-y-3">
+                    <h4 className="font-black text-xs uppercase text-indigo-950 border-b border-slate-300 pb-1.5 flex items-center justify-between">
+                      <span>My Professional Network ({connections.length})</span>
+                      <span className="text-[9px] text-slate-400 font-bold">MUTUAL CONNECTIONS</span>
+                    </h4>
+
+                    <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+                      {connections.map((conn) => {
+                        const isFromUser = conn.fromParticipantId === currentParticipant.id;
+                        const partnerName = isFromUser ? conn.toParticipantName : conn.fromParticipantName;
+                        const partnerCompany = isFromUser ? conn.toParticipantCompany : conn.fromParticipantCompany;
+                        const partnerPosition = isFromUser ? conn.toParticipantPosition : conn.fromParticipantPosition;
+                        
+                        return (
+                          <div key={conn.id} className="bg-white border border-slate-200 p-2.5 flex items-center justify-between hover:border-slate-400 transition-all">
+                            <div>
+                              <span className="font-bold text-slate-800 text-xs block">{partnerName}</span>
+                              <span className="text-[9px] text-slate-500 block">{partnerPosition} @ {partnerCompany}</span>
+                              <span className="text-[8px] text-slate-400 block mt-1">
+                                Met at: {new Date(conn.connectedAt).toLocaleDateString()} {new Date(conn.connectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-none uppercase">
+                                +{conn.pointsAwarded} PTS
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {connections.length === 0 && (
+                        <div className="py-12 text-center text-slate-400 font-mono text-[10px] border border-dashed border-slate-200 bg-slate-50/50">
+                          No connections made yet.<br />Use the interactive simulator on the right to meet other attendees!
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Checked-in Attendees Directory (Simulate physical scanner) */}
+                  <div className="tech-card p-4 font-mono space-y-3 bg-slate-50">
+                    <h4 className="font-black text-xs uppercase text-slate-900 border-b border-slate-300 pb-1.5 flex items-center justify-between">
+                      <span>On-Site Attendees ({leaderboard.filter(p => p.checkedIn && p.id !== currentParticipant.id).length})</span>
+                      <span className="text-[9px] text-indigo-700 font-bold bg-indigo-50 border border-indigo-200 px-1.5 py-0.5">SCANNER SIMULATOR</span>
+                    </h4>
+
+                    <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+                      {leaderboard
+                        .filter(p => p.checkedIn && p.id !== currentParticipant.id)
+                        .map((attendee) => {
+                          const isPartnerConnected = connections.some(c => 
+                            c.fromParticipantId === attendee.id || c.toParticipantId === attendee.id
+                          );
+                          
+                          return (
+                            <div key={attendee.id} className="bg-white border border-slate-200 p-2.5 flex items-center justify-between hover:border-slate-300 transition-all">
+                              <div>
+                                <span className="font-bold text-slate-800 text-xs block">{attendee.name}</span>
+                                <span className="text-[9px] text-slate-500 block">{attendee.position || 'Attendee'} @ {attendee.company}</span>
+                                <span className="text-[8px] text-indigo-500 font-bold font-mono">CODE: {attendee.qrCode || attendee.id}</span>
+                              </div>
+                              <div>
+                                {isPartnerConnected ? (
+                                  <span className="text-[9px] font-bold text-indigo-800 bg-indigo-100 border border-indigo-300 px-2 py-0.5 block uppercase text-center">
+                                    ✓ Connected
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleNetworkingConnect(attendee.qrCode || attendee.id)}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white border border-black text-[9px] uppercase font-black py-1 px-2.5 transition-colors cursor-pointer"
+                                  >
+                                    Scan Badge
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                      {leaderboard.filter(p => p.checkedIn && p.id !== currentParticipant.id).length === 0 && (
+                        <div className="py-12 text-center text-slate-400 font-mono text-[10px] border border-dashed border-slate-200 bg-white">
+                          No other attendees have checked in yet.<br />Open a separate window or check in other accounts first!
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
               </div>
             )}
           </div>

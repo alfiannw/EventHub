@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
-import { Participant, ActivitySubmission, SongRequest, DoorPrizeCategory, LuckyDrawCategory, LuckyDrawWinner, AuditLog, EventConfig, ActivityType, EventPlannerItem } from "./src/types";
+import { Participant, ActivitySubmission, SongRequest, DoorPrizeCategory, LuckyDrawCategory, LuckyDrawWinner, AuditLog, EventConfig, ActivityType, EventPlannerItem, BoothVisit, NetworkingConnection } from "./src/types";
 
 const PORT = 3000;
 const DATA_FILE = path.join(process.cwd(), "db-store.json");
@@ -15,14 +15,14 @@ const DEFAULT_EVENT_CONFIG: EventConfig = {
   time: "09:00 AM - 05:00 PM",
   googleMapsUrl: "https://maps.google.com/?q=Grand+Ballroom,+Tech+Plaza+Hotel,+San+Francisco",
   schedule: [
-    { time: "08:30 AM - 09:30 AM", activity: "Guest Arrival & QR Check-In" },
-    { time: "09:30 AM - 11:00 AM", activity: "Opening Keynote & AI Tech Trends" },
-    { time: "11:00 AM - 12:30 PM", activity: "Panel Discussion: Future of SaaS" },
-    { time: "12:30 PM - 02:00 PM", activity: "Networking Lunch & Photo Wall Sharing" },
-    { time: "02:00 PM - 03:30 PM", activity: "Interactive Product Demos" },
-    { time: "03:30 PM - 04:15 PM", activity: "Song Requests & Live Band Performance" },
-    { time: "04:15 PM - 05:00 PM", activity: "Lucky Draw Wheel Spinner & Door Prizes" },
-    { time: "05:00 PM - 05:30 PM", activity: "Closing Remarks & Event Day Wrap-up" }
+    { time: "08:30 AM - 09:30 AM", activity: "Guest Arrival & QR Check-In", description: "Collect badge and register attendance at the front desk" },
+    { time: "09:30 AM - 11:00 AM", activity: "Opening Keynote & AI Tech Trends", description: "Opening session featuring key tech highlights in Grand Ballroom" },
+    { time: "11:00 AM - 12:30 PM", activity: "Panel Discussion: Future of SaaS", description: "Expert insights panel with corporate leaders and Q&A" },
+    { time: "12:30 PM - 02:00 PM", activity: "Networking Lunch & Photo Wall Sharing", description: "Connect with peers, check-in at sponsor booths and snap photo stories" },
+    { time: "02:00 PM - 03:30 PM", activity: "Interactive Product Demos", description: "Live booths exploration and hands-on developer sandbox sessions" },
+    { time: "03:30 PM - 04:15 PM", activity: "Song Requests & Live Band Performance", description: "Submit your favorite tracks and enjoy live ambient band tunes" },
+    { time: "04:15 PM - 05:00 PM", activity: "Lucky Draw Wheel Spinner & Door Prizes", description: "Grand draw session for eligible participants based on milestone score" },
+    { time: "05:00 PM - 05:30 PM", activity: "Closing Remarks & Event Day Wrap-up", description: "Closing highlights, feedback forms collection and swag distribution" }
   ],
   pointRules: {
     CHECK_IN: 5,
@@ -32,8 +32,56 @@ const DEFAULT_EVENT_CONFIG: EventConfig = {
     SONG_REQUEST: 5,
     STAFF_BEST_PHOTO: 5,
     STAFF_ACTIVE: 5,
+    NETWORKING: 15,
     CUSTOM: 5
-  }
+  },
+  activities: [
+    {
+      id: 'ACT_FEEDBACK',
+      type: 'FEEDBACK',
+      name: 'Submit Event Feedback',
+      description: 'Let the organizer know how we did. Auto-approved on submit.',
+      points: 5,
+      isEnabled: true,
+      requireApproval: false,
+      validationMethod: 'AUTOMATIC'
+    },
+    {
+      id: 'ACT_PHOTO',
+      type: 'PHOTO_UPLOAD',
+      name: 'Share Event Photo',
+      description: 'Snap and upload your best moment from today. Pending Staff review.',
+      points: 5,
+      isEnabled: true,
+      requireApproval: true,
+      validationMethod: 'STAFF_APPROVAL'
+    },
+    {
+      id: 'ACT_IG',
+      type: 'INSTAGRAM_POST',
+      name: 'Instagram Post Screenshot',
+      description: 'Share your experience on IG using #EventHub2026. Pending Staff review.',
+      points: 5,
+      isEnabled: true,
+      requireApproval: true,
+      validationMethod: 'STAFF_APPROVAL'
+    },
+    {
+      id: 'ACT_NETWORKING',
+      type: 'NETWORKING',
+      name: 'Attendee Networking Challenge',
+      description: 'Exchange badge QR codes with other attendees on-site to connect and earn points.',
+      points: 15,
+      isEnabled: true,
+      requireApproval: false,
+      validationMethod: 'QR_SCAN'
+    }
+  ],
+  sponsorBooths: [
+    { id: "sb-1", name: "Google Cloud", boothCode: "BOOTH-101", pointsReward: 10, locationDescription: "East Expo Corridor - Row A" },
+    { id: "sb-2", name: "Stripe", boothCode: "BOOTH-102", pointsReward: 10, locationDescription: "Main Entrance Lounge - Booth B" },
+    { id: "sb-3", name: "Vercel Platforms", boothCode: "BOOTH-103", pointsReward: 15, locationDescription: "Developer Pavilion - Center" }
+  ]
 };
 
 const DEFAULT_DOOR_PRIZES: DoorPrizeCategory[] = [
@@ -311,14 +359,14 @@ const DEFAULT_EVENTS_LIST: EventPlannerItem[] = [
       googleMapsUrl: "https://maps.google.com/?q=Grand+Ballroom,+Tech+Plaza+Hotel,+San+Francisco"
     },
     schedule: [
-      { id: "sch-1", time: "08:30 AM - 09:30 AM", activity: "Guest Arrival & QR Check-In" },
-      { id: "sch-2", time: "09:30 AM - 11:00 AM", activity: "Opening Keynote & AI Tech Trends" },
-      { id: "sch-3", time: "11:00 AM - 12:30 PM", activity: "Panel Discussion: Future of SaaS" },
-      { id: "sch-4", time: "12:30 PM - 02:00 PM", activity: "Networking Lunch & Photo Wall Sharing" },
-      { id: "sch-5", time: "02:00 PM - 03:30 PM", activity: "Interactive Product Demos" },
-      { id: "sch-6", time: "03:30 PM - 04:15 PM", activity: "Song Requests & Live Band Performance" },
-      { id: "sch-7", time: "04:15 PM - 05:00 PM", activity: "Lucky Draw Wheel Spinner & Door Prizes" },
-      { id: "sch-8", time: "05:00 PM - 05:30 PM", activity: "Closing Remarks & Event Day Wrap-up" }
+      { id: "sch-1", time: "08:30 AM - 09:30 AM", activity: "Guest Arrival & QR Check-In", description: "Collect badge and register attendance at the front desk" },
+      { id: "sch-2", time: "09:30 AM - 11:00 AM", activity: "Opening Keynote & AI Tech Trends", description: "Opening session featuring key tech highlights in Grand Ballroom" },
+      { id: "sch-3", time: "11:00 AM - 12:30 PM", activity: "Panel Discussion: Future of SaaS", description: "Expert insights panel with corporate leaders and Q&A" },
+      { id: "sch-4", time: "12:30 PM - 02:00 PM", activity: "Networking Lunch & Photo Wall Sharing", description: "Connect with peers, check-in at sponsor booths and snap photo stories" },
+      { id: "sch-5", time: "02:00 PM - 03:30 PM", activity: "Interactive Product Demos", description: "Live booths exploration and hands-on developer sandbox sessions" },
+      { id: "sch-6", time: "03:30 PM - 04:15 PM", activity: "Song Requests & Live Band Performance", description: "Submit your favorite tracks and enjoy live ambient band tunes" },
+      { id: "sch-7", time: "04:15 PM - 05:00 PM", activity: "Lucky Draw Wheel Spinner & Door Prizes", description: "Grand draw session for eligible participants based on milestone score" },
+      { id: "sch-8", time: "05:00 PM - 05:30 PM", activity: "Closing Remarks & Event Day Wrap-up", description: "Closing highlights, feedback forms collection and swag distribution" }
     ],
     seatingLayout: {
       tablesCount: 12,
@@ -334,14 +382,16 @@ const DEFAULT_EVENTS_LIST: EventPlannerItem[] = [
       SONG_REQUEST: 5,
       STAFF_BEST_PHOTO: 5,
       STAFF_ACTIVE: 5,
+      NETWORKING: 15,
       CUSTOM: 5
     },
     activities: [
-      { id: "act-cfg-1", type: "CHECK_IN", name: "Summit Gate Check-In", isEnabled: true, requireApproval: false },
-      { id: "act-cfg-2", type: "FEEDBACK", name: "Anonymous Feedback Form", isEnabled: true, requireApproval: false },
-      { id: "act-cfg-3", type: "PHOTO_UPLOAD", name: "Photo Wall Upload", isEnabled: true, requireApproval: true },
-      { id: "act-cfg-4", type: "INSTAGRAM_POST", name: "Social Media Outreach", isEnabled: true, requireApproval: true },
-      { id: "act-cfg-5", type: "SONG_REQUEST", name: "Stage Song Request", isEnabled: true, requireApproval: true }
+      { id: "act-cfg-1", type: "CHECK_IN", name: "Summit Gate Check-In", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC" },
+      { id: "act-cfg-2", type: "FEEDBACK", name: "Anonymous Feedback Form", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC" },
+      { id: "act-cfg-3", type: "PHOTO_UPLOAD", name: "Photo Wall Upload", isEnabled: true, requireApproval: true, validationMethod: "STAFF_APPROVAL" },
+      { id: "act-cfg-4", type: "INSTAGRAM_POST", name: "Social Media Outreach", isEnabled: true, requireApproval: true, validationMethod: "STAFF_APPROVAL" },
+      { id: "act-cfg-5", type: "SONG_REQUEST", name: "Stage Song Request", isEnabled: true, requireApproval: true, validationMethod: "STAFF_APPROVAL" },
+      { id: "act-cfg-6", type: "NETWORKING", name: "Attendee Networking Challenge", isEnabled: true, requireApproval: false, validationMethod: "QR_SCAN", points: 15 }
     ],
     sponsorBooths: [
       { id: "sb-1", name: "Google Cloud", boothCode: "BOOTH-101", pointsReward: 10, locationDescription: "East Expo Corridor - Row A" },
@@ -418,11 +468,13 @@ const DEFAULT_EVENTS_LIST: EventPlannerItem[] = [
       SONG_REQUEST: 5,
       STAFF_BEST_PHOTO: 20,
       STAFF_ACTIVE: 10,
+      NETWORKING: 15,
       CUSTOM: 10
     },
     activities: [
-      { id: "act-25-1", type: "CHECK_IN", name: "Moscone Expo Entry scan", isEnabled: true, requireApproval: false },
-      { id: "act-25-2", type: "FEEDBACK", name: "Moscone Feedback Exit survey", isEnabled: true, requireApproval: false }
+      { id: "act-25-1", type: "CHECK_IN", name: "Moscone Expo Entry scan", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC" },
+      { id: "act-25-2", type: "FEEDBACK", name: "Moscone Feedback Exit survey", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC" },
+      { id: "act-25-3", type: "NETWORKING", name: "Attendee Networking Challenge", isEnabled: true, requireApproval: false, validationMethod: "QR_SCAN", points: 15 }
     ],
     sponsorBooths: [
       { id: "sb-25-1", name: "Amazon Web Services", boothCode: "AWS-401", pointsReward: 20, locationDescription: "Moscone Main Floor - Island B" },
@@ -471,6 +523,8 @@ interface DatabaseSchema {
   winners: LuckyDrawWinner[];
   auditLogs: AuditLog[];
   eventsList: EventPlannerItem[];
+  boothVisits: BoothVisit[];
+  networkingConnections: NetworkingConnection[];
 }
 
 // Memory database loaded from or backed up to JSON
@@ -483,7 +537,9 @@ let db: DatabaseSchema = {
   activitySubmissions: INITIAL_SUBMISSIONS,
   winners: [],
   auditLogs: INITIAL_AUDIT_LOGS,
-  eventsList: DEFAULT_EVENTS_LIST
+  eventsList: DEFAULT_EVENTS_LIST,
+  boothVisits: [],
+  networkingConnections: []
 };
 
 // Helper to load database
@@ -494,6 +550,12 @@ function loadDb() {
       db = JSON.parse(data);
       if (!db.eventsList) {
         db.eventsList = DEFAULT_EVENTS_LIST;
+      }
+      if (!db.boothVisits) {
+        db.boothVisits = [];
+      }
+      if (!db.networkingConnections) {
+        db.networkingConnections = [];
       }
     } else {
       saveDb();
@@ -571,7 +633,7 @@ app.post("/api/planner/events", (req, res) => {
         venue: newEvent.venue,
         date: newEvent.date,
         time: newEvent.time,
-        schedule: newEvent.schedule.map(s => ({ time: s.time, activity: s.activity })),
+        schedule: newEvent.schedule.map(s => ({ time: s.time, activity: s.activity, description: s.description })),
         pointRules: newEvent.pointRules,
         googleMapsUrl: newEvent.venueDetails?.googleMapsUrl
       };
@@ -606,7 +668,7 @@ app.post("/api/planner/events/duplicate", (req, res) => {
       venue: duplicated.venue,
       date: duplicated.date,
       time: duplicated.time,
-      schedule: duplicated.schedule.map(s => ({ time: s.time, activity: s.activity })),
+      schedule: duplicated.schedule.map(s => ({ time: s.time, activity: s.activity, description: s.description })),
       pointRules: duplicated.pointRules,
       googleMapsUrl: duplicated.venueDetails?.googleMapsUrl
     };
@@ -653,9 +715,10 @@ app.post("/api/planner/config/all", (req, res) => {
         venue: updatedEvent.venue,
         date: updatedEvent.date,
         time: updatedEvent.time,
-        schedule: updatedEvent.schedule.map(s => ({ time: s.time, activity: s.activity })),
+        schedule: updatedEvent.schedule.map(s => ({ time: s.time, activity: s.activity, description: s.description })),
         pointRules: updatedEvent.pointRules,
-        googleMapsUrl: updatedEvent.venueDetails?.googleMapsUrl
+        googleMapsUrl: updatedEvent.venueDetails?.googleMapsUrl,
+        sponsorBooths: updatedEvent.sponsorBooths
       };
       
       if (updatedEvent.luckyDrawCategories && updatedEvent.luckyDrawCategories.length > 0) {
@@ -1074,6 +1137,302 @@ app.post("/api/participants/rsvp", (req, res) => {
   }
 });
 
+// Sponsor Booth endpoints
+app.get("/api/sponsor-booth/visits", (req, res) => {
+  if (!db.boothVisits) {
+    db.boothVisits = [];
+  }
+  res.json(db.boothVisits);
+});
+
+app.get("/api/sponsor-booth/stats", (req, res) => {
+  if (!db.boothVisits) {
+    db.boothVisits = [];
+  }
+  const visits = db.boothVisits;
+  const activeEvent = db.eventsList.find(e => !e.isArchived) || db.eventsList[0];
+  const booths = activeEvent ? activeEvent.sponsorBooths : [];
+  const participants = db.participants;
+
+  // 1. Traffic by booth (booth traffic)
+  const boothTraffic = booths.map(b => {
+    const boothVisitsList = visits.filter(v => v.boothId === b.id);
+    const uniqueVisitors = new Set(boothVisitsList.map(v => v.participantId)).size;
+    return {
+      id: b.id,
+      name: b.name,
+      boothCode: b.boothCode,
+      location: b.locationDescription,
+      totalVisits: boothVisitsList.length,
+      uniqueVisitors,
+      pointsDistributed: boothVisitsList.reduce((sum, v) => sum + v.pointsAwarded, 0)
+    };
+  });
+
+  // 2. Popular booths (sorted by visits)
+  const popularBooths = [...boothTraffic].sort((a, b) => b.totalVisits - a.totalVisits);
+
+  // 3. Lead Generation (scans grouped by booth with details)
+  const leadGen = booths.map(b => {
+    const boothVisitsList = visits.filter(v => v.boothId === b.id);
+    return {
+      boothId: b.id,
+      boothName: b.name,
+      boothCode: b.boothCode,
+      leadsCount: boothVisitsList.length,
+      leads: boothVisitsList.map(v => ({
+        id: v.participantId,
+        name: v.participantName,
+        email: v.participantEmail,
+        company: v.participantCompany,
+        position: v.participantPosition,
+        visitedAt: v.visitedAt
+      }))
+    };
+  });
+
+  // 4. Sponsor engagement
+  const totalVisits = visits.length;
+  const uniqueScannersCount = new Set(visits.map(v => v.participantId)).size;
+  const checkedInCount = participants.filter(p => p.checkedIn).length;
+  const engagementRate = checkedInCount > 0 ? parseFloat(((uniqueScannersCount / checkedInCount) * 100).toFixed(1)) : 0;
+  const avgBoothsVisited = uniqueScannersCount > 0 ? parseFloat((totalVisits / uniqueScannersCount).toFixed(1)) : 0;
+
+  res.json({
+    boothTraffic,
+    popularBooths,
+    leadGen,
+    engagementRate,
+    avgBoothsVisited,
+    totalVisits,
+    uniqueScannersCount,
+    checkedInCount
+  });
+});
+
+app.post("/api/sponsor-booth/scan", (req, res) => {
+  try {
+    const { participantId, boothCode } = req.body;
+    if (!participantId || !boothCode) {
+      return res.status(400).json({ error: "Missing participantId or boothCode." });
+    }
+
+    const participant = db.participants.find(p => p.id === participantId);
+    if (!participant) {
+      return res.status(404).json({ error: "Participant not found." });
+    }
+
+    if (!participant.checkedIn) {
+      return res.status(400).json({ error: "Participant must be checked-in to scan sponsor booths." });
+    }
+
+    const activeEvent = db.eventsList.find(e => !e.isArchived) || db.eventsList[0];
+    if (!activeEvent) {
+      return res.status(400).json({ error: "No active event configured." });
+    }
+
+    const booth = activeEvent.sponsorBooths.find(b => b.boothCode.toUpperCase() === boothCode.trim().toUpperCase());
+    if (!booth) {
+      return res.status(404).json({ error: "Sponsor booth with this code not found." });
+    }
+
+    if (!db.boothVisits) {
+      db.boothVisits = [];
+    }
+    const alreadyVisited = db.boothVisits.some(v => v.participantId === participantId && v.boothId === booth.id);
+    if (alreadyVisited) {
+      return res.status(400).json({ error: `You have already scanned ${booth.name}'s booth!` });
+    }
+
+    const pointsReward = booth.pointsReward || 10;
+    participant.points += pointsReward;
+
+    const visit: BoothVisit = {
+      id: `visit-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      participantId: participant.id,
+      participantName: participant.name,
+      participantEmail: participant.email,
+      participantCompany: participant.company,
+      participantPosition: participant.position || "Attendee",
+      boothId: booth.id,
+      boothName: booth.name,
+      boothCode: booth.boothCode,
+      pointsAwarded: pointsReward,
+      visitedAt: new Date().toISOString()
+    };
+
+    db.boothVisits.push(visit);
+
+    // Also record it as an activity submission for consistency
+    const activitySub: ActivitySubmission = {
+      id: `act-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      participantId: participant.id,
+      participantName: participant.name,
+      activityType: "CUSTOM",
+      description: `Visited sponsor booth: ${booth.name} (${booth.boothCode})`,
+      content: `Booth visit: ${booth.name}. Awarded ${pointsReward} pts.`,
+      pointsAwarded: pointsReward,
+      status: "APPROVED",
+      submittedAt: visit.visitedAt
+    };
+    db.activitySubmissions.push(activitySub);
+
+    addAuditLog(
+      participant.name,
+      "Participant",
+      "SPONSOR_BOOTH_SCAN",
+      `Participant ${participant.name} scanned booth ${booth.name} (${booth.boothCode}) and got ${pointsReward} pts.`,
+      "SUCCESS"
+    );
+
+    saveDb();
+    res.json({ success: true, participant, visit });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Networking Challenge routes
+app.get("/api/networking/connections", (req, res) => {
+  res.json(db.networkingConnections || []);
+});
+
+app.post("/api/networking/connect", (req, res) => {
+  try {
+    const { fromParticipantId, targetCode } = req.body;
+    if (!fromParticipantId || !targetCode) {
+      return res.status(400).json({ error: "Missing participantId or target QR code." });
+    }
+
+    const fromParticipant = db.participants.find(p => p.id === fromParticipantId);
+    if (!fromParticipant) {
+      return res.status(404).json({ error: "Your participant record was not found." });
+    }
+
+    if (!fromParticipant.checkedIn) {
+      return res.status(400).json({ error: "You must be checked-in to participate in the Networking Challenge." });
+    }
+
+    const cleanTargetCode = targetCode.trim();
+    const toParticipant = db.participants.find(p => p.qrCode === cleanTargetCode || p.id === cleanTargetCode);
+    if (!toParticipant) {
+      return res.status(404).json({ error: "No attendee found with that code/QR." });
+    }
+
+    if (fromParticipant.id === toParticipant.id) {
+      return res.status(400).json({ error: "You cannot network with yourself! Try scanning another attendee's QR." });
+    }
+
+    if (!toParticipant.checkedIn) {
+      return res.status(400).json({ error: `Attendee ${toParticipant.name} has not checked in yet.` });
+    }
+
+    if (!db.networkingConnections) {
+      db.networkingConnections = [];
+    }
+
+    const alreadyConnected = db.networkingConnections.some(c => 
+      (c.fromParticipantId === fromParticipant.id && c.toParticipantId === toParticipant.id) ||
+      (c.fromParticipantId === toParticipant.id && c.toParticipantId === fromParticipant.id)
+    );
+
+    if (alreadyConnected) {
+      return res.status(400).json({ error: `You have already connected with ${toParticipant.name}!` });
+    }
+
+    const activeEvent = db.eventsList.find(e => !e.isArchived) || db.eventsList[0];
+    let pointsReward = db.eventConfig.pointRules.NETWORKING || 15;
+    if (activeEvent && activeEvent.activities) {
+      const netAct = activeEvent.activities.find(a => a.type === "NETWORKING");
+      if (netAct) {
+        if (!netAct.isEnabled) {
+          return res.status(400).json({ error: "The Networking Challenge is currently disabled by the event organizer." });
+        }
+        if (typeof netAct.points === 'number') {
+          pointsReward = netAct.points;
+        }
+      }
+    }
+    
+    // Award points to BOTH participants
+    fromParticipant.points += pointsReward;
+    toParticipant.points += pointsReward;
+
+    const connection: NetworkingConnection = {
+      id: `net-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      fromParticipantId: fromParticipant.id,
+      fromParticipantName: fromParticipant.name,
+      fromParticipantCompany: fromParticipant.company,
+      fromParticipantPosition: fromParticipant.position || "Attendee",
+      toParticipantId: toParticipant.id,
+      toParticipantName: toParticipant.name,
+      toParticipantCompany: toParticipant.company,
+      toParticipantPosition: toParticipant.position || "Attendee",
+      pointsAwarded: pointsReward,
+      connectedAt: new Date().toISOString()
+    };
+
+    db.networkingConnections.push(connection);
+
+    // Record activity submissions for both
+    const activitySub1: ActivitySubmission = {
+      id: `act-${Date.now()}-net1`,
+      participantId: fromParticipant.id,
+      participantName: fromParticipant.name,
+      activityType: "NETWORKING",
+      description: `Met with ${toParticipant.name} (${toParticipant.company})`,
+      content: `Connected with attendee: ${toParticipant.name}. Awarded ${pointsReward} pts.`,
+      pointsAwarded: pointsReward,
+      status: "APPROVED",
+      submittedAt: connection.connectedAt
+    };
+
+    const activitySub2: ActivitySubmission = {
+      id: `act-${Date.now()}-net2`,
+      participantId: toParticipant.id,
+      participantName: toParticipant.name,
+      activityType: "NETWORKING",
+      description: `Met with ${fromParticipant.name} (${fromParticipant.company})`,
+      content: `Connected with attendee: ${fromParticipant.name}. Awarded ${pointsReward} pts.`,
+      pointsAwarded: pointsReward,
+      status: "APPROVED",
+      submittedAt: connection.connectedAt
+    };
+
+    db.activitySubmissions.push(activitySub1);
+    db.activitySubmissions.push(activitySub2);
+
+    addAuditLog(
+      fromParticipant.name,
+      "Participant",
+      "NETWORKING_CONNECT",
+      `Attendee ${fromParticipant.name} connected with ${toParticipant.name} (${toParticipant.company}) and both received +${pointsReward} pts.`,
+      "SUCCESS"
+    );
+
+    saveDb();
+    res.json({ success: true, connection, pointsAwarded: pointsReward, targetParticipantName: toParticipant.name });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post("/api/networking/reset", (req, res) => {
+  db.networkingConnections = [];
+  db.activitySubmissions = db.activitySubmissions.filter(sub => sub.activityType !== "NETWORKING");
+  addAuditLog("Manager", "Event Manager", "RESET_NETWORKING_CONNECTIONS", "Reset all participant networking connections.", "WARNING");
+  saveDb();
+  res.json({ success: true });
+});
+
+app.post("/api/sponsor-booth/reset", (req, res) => {
+  db.boothVisits = [];
+  db.activitySubmissions = db.activitySubmissions.filter(sub => !sub.description.startsWith("Visited sponsor booth:"));
+  addAuditLog("Manager", "Event Manager", "RESET_SPONSOR_BOOTH_VISITS", "Reset all sponsor booth visits.", "WARNING");
+  saveDb();
+  res.json({ success: true, message: "Sponsor booth visits have been reset." });
+});
+
 // Check-in participant
 app.post("/api/checkin", (req, res) => {
   try {
@@ -1137,7 +1496,16 @@ app.post("/api/activities", (req, res) => {
       return res.status(404).json({ error: "Participant not found" });
     }
 
-    const points = db.eventConfig.pointRules[activityType as ActivityType] || 5;
+    // Determine points and auto-approve status based on dynamic activities list
+    const matchedActivity = db.eventConfig.activities?.find(a => a.type === activityType);
+    const points = matchedActivity?.points ?? db.eventConfig.pointRules[activityType as ActivityType] ?? 5;
+    
+    let isAutoApprove = false;
+    if (matchedActivity) {
+      isAutoApprove = matchedActivity.validationMethod === 'AUTOMATIC' || (!matchedActivity.validationMethod && !matchedActivity.requireApproval);
+    } else {
+      isAutoApprove = activityType === "FEEDBACK" || activityType === "CHECK_IN";
+    }
 
     // Build the submission
     const newSubmission: ActivitySubmission = {
@@ -1148,7 +1516,7 @@ app.post("/api/activities", (req, res) => {
       description,
       content,
       pointsAwarded: points,
-      status: activityType === "FEEDBACK" || activityType === "CHECK_IN" ? "APPROVED" : "PENDING", // Feedback & check-in auto-approved
+      status: isAutoApprove ? "APPROVED" : "PENDING",
       submittedAt: new Date().toISOString()
     };
 

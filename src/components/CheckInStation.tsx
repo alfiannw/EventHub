@@ -1660,9 +1660,9 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
                     </p>
 
                     {/* Image visual container if screenshot or photo upload */}
-                    {(sub.activityType === 'PHOTO_UPLOAD' || sub.activityType === 'INSTAGRAM_POST') && sub.content ? (
+                    {sub.content && (sub.activityType === 'PHOTO_UPLOAD' || sub.activityType === 'INSTAGRAM_POST' || sub.content.startsWith('data:image/') || sub.content.match(/\.(jpeg|jpg|gif|png|webp)$/i)) ? (
                       <div className="rounded-none overflow-hidden border border-[#141414] bg-white aspect-video relative group">
-                        <img src={sub.content} alt="Proof" className="w-full h-full object-cover" />
+                        <img src={sub.content} alt="Proof" className="w-full h-full object-contain" />
                         <a 
                           href={sub.content} 
                           target="_blank" 
@@ -1672,10 +1672,10 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
                           [VIEW FULL IMAGE]
                         </a>
                       </div>
-                    ) : (
+                    ) : sub.content ? (
                       /* Text content otherwise */
                       <div className="bg-white border border-[#141414] p-2 text-xs break-words">{sub.content}</div>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* Actions buttons */}
