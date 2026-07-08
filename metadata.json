@@ -1,0 +1,6 @@
+{
+  "name": "EventHub",
+  "description": "Enterprise SaaS Event Management platform featuring RSVP registration, digital passes, QR check-in, badge printing, gamified activity tracking, lucky draw spinner, and real-time analytics.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

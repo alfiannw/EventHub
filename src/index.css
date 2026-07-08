@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-serif: "Georgia", serif;
+  
+  --color-canvas: #E4E3E0;
+  --color-ink: #141414;
+  --color-line: #141414;
+  --color-sidebar: #DFDEDA;
+  --color-header: #D8D7D4;
+  --color-card: #CFCECA;
+  --color-highlight: #00FF00;
+}
+
+@layer base {
+  body {
+    background-color: #E4E3E0;
+    color: #141414;
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+/* Custom Swiss Grid buttons, inputs, and card styles to perfectly implement the design requested */
+.btn-action-custom {
+  border: 1.5px solid #141414;
+  background-color: transparent;
+  color: #141414;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 8px 12px;
+  transition: all 0.1s ease-in-out;
+  border-radius: 0px !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-action-custom:hover {
+  background-color: #141414;
+  color: #E4E3E0;
+}
+
+.btn-action-primary {
+  border: 1.5px solid #141414;
+  background-color: #141414;
+  color: #E4E3E0;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 8px 12px;
+  transition: all 0.1s ease-in-out;
+  border-radius: 0px !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-action-primary:hover {
+  background-color: #E4E3E0;
+  color: #141414;
+}
+
+.tech-card {
+  background-color: #ffffff;
+  border: 1.5px solid #141414;
+  border-radius: 0px !important;
+  box-shadow: 3px 3px 0px 0px #141414;
+}
+
+.tech-card-gray {
+  background-color: #DFDEDA;
+  border: 1.5px solid #141414;
+  border-radius: 0px !important;
+  box-shadow: 3px 3px 0px 0px #141414;
+}
+
+.tech-card-dark {
+  background-color: #141414;
+  color: #E4E3E0;
+  border: 1.5px solid #141414;
+  border-radius: 0px !important;
+  box-shadow: 3px 3px 0px 0px #141414;
+}
+
+.tech-input {
+  border: 1.5px solid #141414;
+  background-color: #ffffff;
+  color: #141414;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  border-radius: 0px !important;
+  padding: 8px 12px;
+  font-size: 12px;
+  outline: none;
+}
+
+.tech-input:focus {
+  background-color: #F5F4F0;
+  box-shadow: inset 0px 0px 4px rgba(20, 20, 20, 0.1);
+}
+
+.tech-select {
+  border: 1.5px solid #141414;
+  background-color: #ffffff;
+  color: #141414;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  border-radius: 0px !important;
+  padding: 6px 12px;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Custom Scrollbar for Monospace fields */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #E4E3E0;
+  border-left: 1px solid #141414;
+}
+::-webkit-scrollbar-thumb {
+  background: #141414;
+  border: 1px solid #E4E3E0;
+}
