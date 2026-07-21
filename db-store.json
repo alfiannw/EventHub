@@ -1,0 +1,1136 @@
+{
+  "eventConfig": {
+    "name": "EventHub Global Tech Summit 2026",
+    "venue": "Grand Ballroom, Tech Plaza Hotel, San Francisco",
+    "date": "2026-07-15",
+    "time": "09:00 AM - 05:00 PM",
+    "googleMapsUrl": "https://maps.google.com/?q=Grand+Ballroom,+Tech+Plaza+Hotel,+San+Francisco",
+    "showLeaderboardRank": true,
+    "schedule": [
+      {
+        "time": "08:30 AM - 09:30 AM",
+        "activity": "Guest Arrival & QR Check-In",
+        "description": "Collect badge and register attendance at the front desk"
+      },
+      {
+        "time": "09:30 AM - 11:00 AM",
+        "activity": "Opening Keynote & AI Tech Trends",
+        "description": "Opening session featuring key tech highlights in Grand Ballroom"
+      },
+      {
+        "time": "11:00 AM - 12:30 PM",
+        "activity": "Panel Discussion: Future of SaaS",
+        "description": "Expert insights panel with corporate leaders and Q&A"
+      },
+      {
+        "time": "12:30 PM - 02:00 PM",
+        "activity": "Networking Lunch & Photo Wall Sharing",
+        "description": "Connect with peers, check-in at sponsor booths and snap photo stories"
+      },
+      {
+        "time": "02:00 PM - 03:30 PM",
+        "activity": "Interactive Product Demos",
+        "description": "Live booths exploration and hands-on developer sandbox sessions"
+      },
+      {
+        "time": "03:30 PM - 04:15 PM",
+        "activity": "Song Requests & Live Band Performance",
+        "description": "Submit your favorite tracks and enjoy live ambient band tunes"
+      },
+      {
+        "time": "04:15 PM - 05:00 PM",
+        "activity": "Lucky Draw Wheel Spinner & Door Prizes",
+        "description": "Grand draw session for eligible participants based on milestone score"
+      },
+      {
+        "time": "05:00 PM - 05:30 PM",
+        "activity": "Closing Remarks & Event Day Wrap-up",
+        "description": "Closing highlights, feedback forms collection and swag distribution"
+      }
+    ],
+    "pointRules": {
+      "CHECK_IN": 5,
+      "FEEDBACK": 5,
+      "PHOTO_UPLOAD": 5,
+      "INSTAGRAM_POST": 5,
+      "SONG_REQUEST": 5,
+      "STAFF_BEST_PHOTO": 5,
+      "STAFF_ACTIVE": 5,
+      "NETWORKING": 15,
+      "CUSTOM": 5
+    },
+    "activities": [
+      {
+        "id": "ACT_FEEDBACK",
+        "type": "FEEDBACK",
+        "name": "Submit Event Feedback",
+        "description": "Let the organizer know how we did. Auto-approved on submit.",
+        "points": 5,
+        "isEnabled": true,
+        "requireApproval": false,
+        "validationMethod": "AUTOMATIC"
+      },
+      {
+        "id": "ACT_PHOTO",
+        "type": "PHOTO_UPLOAD",
+        "name": "Share Event Photo",
+        "description": "Snap and upload your best moment from today. Pending Staff review.",
+        "points": 5,
+        "isEnabled": true,
+        "requireApproval": true,
+        "validationMethod": "STAFF_APPROVAL"
+      },
+      {
+        "id": "ACT_IG",
+        "type": "INSTAGRAM_POST",
+        "name": "Instagram Post Screenshot",
+        "description": "Share your experience on IG using #EventHub2026. Pending Staff review.",
+        "points": 5,
+        "isEnabled": true,
+        "requireApproval": true,
+        "validationMethod": "STAFF_APPROVAL"
+      },
+      {
+        "id": "ACT_NETWORKING",
+        "type": "NETWORKING",
+        "name": "Attendee Networking Challenge",
+        "description": "Exchange badge QR codes with other attendees on-site to connect and earn points.",
+        "points": 15,
+        "isEnabled": true,
+        "requireApproval": false,
+        "validationMethod": "QR_SCAN"
+      }
+    ],
+    "sponsorBooths": [
+      {
+        "id": "sb-1",
+        "name": "Google Cloud",
+        "boothCode": "BOOTH-101",
+        "pointsReward": 10,
+        "locationDescription": "East Expo Corridor - Row A"
+      },
+      {
+        "id": "sb-2",
+        "name": "Stripe",
+        "boothCode": "BOOTH-102",
+        "pointsReward": 10,
+        "locationDescription": "Main Entrance Lounge - Booth B"
+      },
+      {
+        "id": "sb-3",
+        "name": "Vercel Platforms",
+        "boothCode": "BOOTH-103",
+        "pointsReward": 15,
+        "locationDescription": "Developer Pavilion - Center"
+      }
+    ]
+  },
+  "doorPrizeCategories": [
+    {
+      "id": "dp-1",
+      "name": "Category A",
+      "minPoints": 0,
+      "maxPoints": 10,
+      "description": "Bronze Tier - Eligible for local gift cards and merchandise"
+    },
+    {
+      "id": "dp-2",
+      "name": "Category B",
+      "minPoints": 11,
+      "maxPoints": 20,
+      "description": "Silver Tier - Eligible for smart home gadgets and premium audio gears"
+    },
+    {
+      "id": "dp-3",
+      "name": "Category C",
+      "minPoints": 21,
+      "maxPoints": 999,
+      "description": "Gold Tier - Eligible for high-end notebooks, flagship smartphones and major assets"
+    }
+  ],
+  "luckyDrawCategories": [
+    {
+      "id": "ld-1",
+      "name": "Grand Prize",
+      "eligiblePointsMin": 21,
+      "prizeName": "Apple MacBook Pro 16\"",
+      "quantity": 1
+    },
+    {
+      "id": "ld-2",
+      "name": "Gold Prize",
+      "eligiblePointsMin": 11,
+      "prizeName": "Apple iPad Pro 11\"",
+      "quantity": 2
+    },
+    {
+      "id": "ld-3",
+      "name": "Silver Prize",
+      "eligiblePointsMin": 5,
+      "prizeName": "Sony WH-1000XM5 Headphones",
+      "quantity": 3
+    },
+    {
+      "id": "ld-4",
+      "name": "Bronze Prize",
+      "eligiblePointsMin": 0,
+      "prizeName": "Anker Prime Power Bank",
+      "quantity": 5
+    }
+  ],
+  "participants": [
+    {
+      "id": "EH-1001",
+      "name": "Alex Rivera",
+      "email": "alex.rivera@meta.com",
+      "phone": "+1 (555) 123-4567",
+      "company": "Meta Platforms Inc.",
+      "position": "Senior Staff Engineer",
+      "tableNumber": "Table 4",
+      "seatNumber": "Seat A-12",
+      "rsvpStatus": "YES",
+      "checkedIn": true,
+      "checkedInAt": "2026-07-07T08:45:00-07:00",
+      "points": 25,
+      "qrCode": "EH-1001-alex.rivera@meta.com",
+      "invitationStatus": "OPENED",
+      "approved": true
+    },
+    {
+      "id": "EH-1002",
+      "name": "Sarah Chen",
+      "email": "sarah.chen@google.com",
+      "phone": "+1 (555) 987-6543",
+      "company": "Google LLC",
+      "position": "VP of Product Development",
+      "tableNumber": "Table 1",
+      "seatNumber": "Seat VIP-3",
+      "rsvpStatus": "YES",
+      "checkedIn": true,
+      "checkedInAt": "2026-07-07T08:52:15-07:00",
+      "points": 15,
+      "qrCode": "EH-1002-sarah.chen@google.com",
+      "approved": true
+    },
+    {
+      "id": "EH-1003",
+      "name": "Marcus Aurelius",
+      "email": "marcus.a@netflix.com",
+      "phone": "+1 (555) 246-8101",
+      "company": "Netflix Inc.",
+      "position": "Director of Engineering",
+      "tableNumber": "Table 2",
+      "seatNumber": "Seat B-1",
+      "rsvpStatus": "YES",
+      "checkedIn": true,
+      "checkedInAt": "2026-07-07T09:05:11-07:00",
+      "points": 5,
+      "qrCode": "EH-1003-marcus.a@netflix.com",
+      "approved": true
+    },
+    {
+      "id": "EH-1004",
+      "name": "Elena Rostova",
+      "email": "elena.rostova@jetbrains.com",
+      "phone": "+1 (555) 369-1215",
+      "company": "JetBrains s.r.o.",
+      "position": "Developer Advocate",
+      "tableNumber": "Table 6",
+      "seatNumber": "Seat C-5",
+      "rsvpStatus": "YES",
+      "checkedIn": false,
+      "checkedInAt": null,
+      "points": 0,
+      "qrCode": "EH-1004-elena.rostova@jetbrains.com",
+      "approved": true
+    },
+    {
+      "id": "EH-1005",
+      "name": "Kofi Mensah",
+      "email": "k.mensah@stripe.com",
+      "phone": "+1 (555) 789-0123",
+      "company": "Stripe Inc.",
+      "position": "Principal Product Designer",
+      "tableNumber": "Table 3",
+      "seatNumber": "Seat B-8",
+      "rsvpStatus": "YES",
+      "checkedIn": true,
+      "checkedInAt": "2026-07-07T09:12:00-07:00",
+      "points": 30,
+      "qrCode": "EH-1005-k.mensah@stripe.com",
+      "approved": true
+    },
+    {
+      "id": "EH-1006",
+      "name": "Yuki Tanaka",
+      "email": "tanaka.yuki@sony.co.jp",
+      "phone": "+81 90-1234-5678",
+      "company": "Sony Corporation",
+      "position": "Lead UI Designer",
+      "tableNumber": "Table 5",
+      "seatNumber": "Seat C-11",
+      "rsvpStatus": "YES",
+      "checkedIn": true,
+      "checkedInAt": "2026-07-07T08:58:30-07:00",
+      "points": 10,
+      "qrCode": "EH-1006-tanaka.yuki@sony.co.jp",
+      "approved": true
+    },
+    {
+      "id": "EH-1007",
+      "name": "Clara Dupont",
+      "email": "c.dupont@spotify.com",
+      "phone": "+33 6 1234 5678",
+      "company": "Spotify AB",
+      "position": "Infrastructure Lead",
+      "tableNumber": "Table 4",
+      "seatNumber": "Seat A-3",
+      "rsvpStatus": "YES",
+      "checkedIn": true,
+      "checkedInAt": "2026-07-21T00:28:14.505Z",
+      "points": 15,
+      "qrCode": "EH-1007-c.dupont@spotify.com",
+      "invitationStatus": "OPENED",
+      "approved": true
+    },
+    {
+      "id": "EH-1008",
+      "name": "Liam O'Connor",
+      "email": "liam.oc@atlassian.com",
+      "phone": "+61 2 9876 5432",
+      "company": "Atlassian Corp.",
+      "position": "Senior Event Coordinator",
+      "tableNumber": "Table 2",
+      "seatNumber": "Seat B-2",
+      "rsvpStatus": "PENDING",
+      "checkedIn": false,
+      "checkedInAt": null,
+      "points": 0,
+      "qrCode": "EH-1008-liam.oc@atlassian.com",
+      "approved": true
+    },
+    {
+      "id": "EH-1009",
+      "name": "Juliyani Purnama",
+      "email": "22suratmanu@gmail.com",
+      "phone": "084949494949",
+      "company": "KIASU SPACE",
+      "position": "CEO",
+      "tableNumber": "Table General",
+      "seatNumber": "Seat 11",
+      "rsvpStatus": "YES",
+      "checkedIn": false,
+      "checkedInAt": null,
+      "points": 0,
+      "qrCode": "EH-1009-22suratmanu@gmail.com",
+      "invitationStatus": "REGISTERED",
+      "invitationChannel": "EMAIL",
+      "password": "123456",
+      "dietaryPreference": "None",
+      "tShirtSize": "M",
+      "specialNeeds": "",
+      "companyLogoUrl": "",
+      "avatarUrl": "",
+      "approved": true
+    },
+    {
+      "id": "EH-1010",
+      "name": "Budi Santoso",
+      "email": "budi.santoso@gmail.com",
+      "phone": "081234567890",
+      "company": "IndoTech Solutions",
+      "position": "Software Engineer",
+      "tableNumber": "Table 5",
+      "seatNumber": "Seat B-3",
+      "rsvpStatus": "YES",
+      "checkedIn": false,
+      "checkedInAt": null,
+      "points": 0,
+      "qrCode": "EH-1010-budi.santoso@gmail.com",
+      "invitationStatus": "REGISTERED",
+      "invitationChannel": "EMAIL",
+      "password": "password123",
+      "dietaryPreference": "None",
+      "tShirtSize": "M",
+      "specialNeeds": "",
+      "companyLogoUrl": "",
+      "avatarUrl": "",
+      "approved": true
+    },
+    {
+      "id": "EH-1011",
+      "name": "Dewi Lestari",
+      "email": "dewi.lestari@gmail.com",
+      "phone": "081234567891",
+      "company": "Suryatech Labs",
+      "position": "Product Manager",
+      "tableNumber": "Table 6",
+      "seatNumber": "Seat C-1",
+      "rsvpStatus": "YES",
+      "checkedIn": false,
+      "checkedInAt": null,
+      "points": 0,
+      "qrCode": "EH-1011-dewi.lestari@gmail.com",
+      "invitationStatus": "REGISTERED",
+      "invitationChannel": "EMAIL",
+      "password": "password123",
+      "dietaryPreference": "None",
+      "tShirtSize": "M",
+      "specialNeeds": "",
+      "companyLogoUrl": "",
+      "avatarUrl": "",
+      "approved": true
+    },
+    {
+      "id": "EH-1012",
+      "name": "Eko Prasetyo",
+      "email": "eko.prasetyo@gmail.com",
+      "phone": "081234567892",
+      "company": "Nusantara Digital",
+      "position": "UI/UX Designer",
+      "tableNumber": "Table 7",
+      "seatNumber": "Seat D-4",
+      "rsvpStatus": "YES",
+      "checkedIn": false,
+      "checkedInAt": null,
+      "points": 0,
+      "qrCode": "EH-1012-eko.prasetyo@gmail.com",
+      "invitationStatus": "REGISTERED",
+      "invitationChannel": "EMAIL",
+      "password": "password123",
+      "dietaryPreference": "None",
+      "tShirtSize": "M",
+      "specialNeeds": "",
+      "companyLogoUrl": "",
+      "avatarUrl": "",
+      "approved": true
+    },
+    {
+      "id": "EH-1013",
+      "name": "Fitri Handayani",
+      "email": "fitri.handayani@gmail.com",
+      "phone": "081234567893",
+      "company": "Karya Anak Bangsa",
+      "position": "Data Analyst",
+      "tableNumber": "Table 8",
+      "seatNumber": "Seat E-2",
+      "rsvpStatus": "YES",
+      "checkedIn": false,
+      "checkedInAt": null,
+      "points": 0,
+      "qrCode": "EH-1013-fitri.handayani@gmail.com",
+      "invitationStatus": "REGISTERED",
+      "invitationChannel": "EMAIL",
+      "password": "password123",
+      "dietaryPreference": "None",
+      "tShirtSize": "M",
+      "specialNeeds": "",
+      "companyLogoUrl": "",
+      "avatarUrl": "",
+      "approved": true
+    },
+    {
+      "id": "EH-1014",
+      "name": "Giri Wijaya",
+      "email": "giri.wijaya@gmail.com",
+      "phone": "081234567894",
+      "company": "Bhinneka Devs",
+      "position": "DevOps Engineer",
+      "tableNumber": "Table 9",
+      "seatNumber": "Seat F-1",
+      "rsvpStatus": "YES",
+      "checkedIn": false,
+      "checkedInAt": null,
+      "points": 0,
+      "qrCode": "EH-1014-giri.wijaya@gmail.com",
+      "invitationStatus": "REGISTERED",
+      "invitationChannel": "EMAIL",
+      "password": "password123",
+      "dietaryPreference": "None",
+      "tShirtSize": "M",
+      "specialNeeds": "",
+      "companyLogoUrl": "",
+      "avatarUrl": "",
+      "approved": true
+    }
+  ],
+  "songRequests": [
+    {
+      "id": "song-1",
+      "participantId": "EH-1001",
+      "participantName": "Alex Rivera",
+      "artist": "Daft Punk",
+      "title": "One More Time",
+      "message": "Let's kickstart this summit with a bang! Perfect networking mood.",
+      "status": "APPROVED",
+      "submittedAt": "2026-07-07T09:15:00-07:00"
+    },
+    {
+      "id": "song-2",
+      "participantId": "EH-1002",
+      "participantName": "Sarah Chen",
+      "artist": "Coldplay",
+      "title": "A Sky Full of Stars",
+      "message": "Dedicated to the amazing organizing team behind EventHub!",
+      "status": "PLAYED",
+      "submittedAt": "2026-07-07T09:25:00-07:00"
+    },
+    {
+      "id": "song-3",
+      "participantId": "EH-1005",
+      "participantName": "Kofi Mensah",
+      "artist": "The Weeknd",
+      "title": "Blinding Lights",
+      "message": "Keeping the energy level high for the panel speakers!",
+      "status": "PENDING",
+      "submittedAt": "2026-07-07T09:40:00-07:00"
+    }
+  ],
+  "activitySubmissions": [
+    {
+      "id": "act-1",
+      "participantId": "EH-1001",
+      "participantName": "Alex Rivera",
+      "activityType": "PHOTO_UPLOAD",
+      "description": "Uploaded photo at Main Keynote stage",
+      "content": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=60",
+      "pointsAwarded": 5,
+      "status": "APPROVED",
+      "submittedAt": "2026-07-07T09:30:00-07:00"
+    },
+    {
+      "id": "act-2",
+      "participantId": "EH-1005",
+      "participantName": "Kofi Mensah",
+      "activityType": "INSTAGRAM_POST",
+      "description": "Shared event Instagram story with hashtag #EventHub2026",
+      "content": "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop&q=60",
+      "pointsAwarded": 5,
+      "status": "APPROVED",
+      "submittedAt": "2026-07-07T09:35:00-07:00"
+    },
+    {
+      "id": "act-3",
+      "participantId": "EH-1001",
+      "participantName": "Alex Rivera",
+      "activityType": "FEEDBACK",
+      "description": "Submitted event registration day feedback",
+      "content": "Extremely fast check-in experience! The digital event pass and instant QR badge printer are brilliant.",
+      "pointsAwarded": 5,
+      "status": "APPROVED",
+      "submittedAt": "2026-07-07T09:45:00-07:00"
+    },
+    {
+      "id": "act-4",
+      "participantId": "EH-1002",
+      "participantName": "Sarah Chen",
+      "activityType": "PHOTO_UPLOAD",
+      "description": "Uploaded photo from VIP networking session",
+      "content": "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&auto=format&fit=crop&q=60",
+      "pointsAwarded": 5,
+      "status": "APPROVED",
+      "submittedAt": "2026-07-07T09:50:00-07:00"
+    },
+    {
+      "id": "act-5",
+      "participantId": "EH-1005",
+      "participantName": "Kofi Mensah",
+      "activityType": "STAFF_BEST_PHOTO",
+      "description": "Awarded by Staff for best keynote event photo!",
+      "content": "Staff confirmed outstanding creative composition on stage snap.",
+      "pointsAwarded": 5,
+      "status": "APPROVED",
+      "submittedAt": "2026-07-07T10:00:00-07:00"
+    },
+    {
+      "id": "act-1784593694505-88",
+      "participantId": "EH-1007",
+      "participantName": "Clara Dupont",
+      "activityType": "CHECK_IN",
+      "description": "Auto-awarded points for QR / Manual check-in",
+      "content": "Checked-in timestamp: 2026-07-21T00:28:14.505Z",
+      "pointsAwarded": 5,
+      "status": "APPROVED",
+      "submittedAt": "2026-07-21T00:28:14.505Z"
+    },
+    {
+      "id": "act-1784593959535-153",
+      "participantId": "EH-1007",
+      "participantName": "Clara Dupont",
+      "activityType": "CUSTOM",
+      "description": "Visited sponsor booth: Google Cloud (BOOTH-101)",
+      "content": "Booth visit: Google Cloud. Awarded 10 pts.",
+      "pointsAwarded": 10,
+      "status": "APPROVED",
+      "submittedAt": "2026-07-21T00:32:39.535Z"
+    }
+  ],
+  "winners": [],
+  "auditLogs": [
+    {
+      "id": "log-1784603728467-479",
+      "timestamp": "2026-07-21T03:15:28.467Z",
+      "actor": "Participant",
+      "role": "Event Participant",
+      "action": "REGISTER",
+      "details": "New participant registered: Juliyani Purnama (KIASU SPACE).",
+      "severity": "INFO"
+    },
+    {
+      "id": "log-1784603623278-378",
+      "timestamp": "2026-07-21T03:13:43.278Z",
+      "actor": "Superadmin",
+      "role": "System Security",
+      "action": "REGISTER_STAFF",
+      "details": "New Event Staff whitelisted and registered: staff even jkt (staff@eventhub.com).",
+      "severity": "SUCCESS"
+    },
+    {
+      "id": "log-1784602867417-408",
+      "timestamp": "2026-07-21T03:01:07.417Z",
+      "actor": "Superadmin",
+      "role": "System Security",
+      "action": "REGISTER_MANAGER",
+      "details": "New Event Manager whitelisted and registered: Prof ANW (prof.a.wicaksono@gmail.com).",
+      "severity": "SUCCESS"
+    },
+    {
+      "id": "log-1784602790507-811",
+      "timestamp": "2026-07-21T02:59:50.507Z",
+      "actor": "Superadmin",
+      "role": "System Security",
+      "action": "WHITELIST_ADD",
+      "details": "Added email to Event Manager whitelist: prof.a.wicaksono@gmail.com",
+      "severity": "SUCCESS"
+    },
+    {
+      "id": "log-1784593959535-900",
+      "timestamp": "2026-07-21T00:32:39.535Z",
+      "actor": "Clara Dupont",
+      "role": "Participant",
+      "action": "SPONSOR_BOOTH_SCAN",
+      "details": "Participant Clara Dupont scanned booth Google Cloud (BOOTH-101) and got 10 pts.",
+      "severity": "SUCCESS"
+    },
+    {
+      "id": "log-1784593694505-24",
+      "timestamp": "2026-07-21T00:28:14.505Z",
+      "actor": "Staff-Desk-01",
+      "role": "Event Staff",
+      "action": "PARTICIPANT_CHECKIN",
+      "details": "Checked-in participant Clara Dupont (EH-1007) successfully and awarded 5 pts.",
+      "severity": "SUCCESS"
+    },
+    {
+      "id": "log-1784593626633-652",
+      "timestamp": "2026-07-21T00:27:06.633Z",
+      "actor": "System",
+      "role": "Invitation Tracker",
+      "action": "INVITATION_OPENED",
+      "details": "Guest Clara Dupont (c.dupont@spotify.com) opened their invitation.",
+      "severity": "INFO"
+    },
+    {
+      "id": "log-1784593314952-766",
+      "timestamp": "2026-07-21T00:21:54.952Z",
+      "actor": "System",
+      "role": "Invitation Tracker",
+      "action": "INVITATION_OPENED",
+      "details": "Guest Alex Rivera (alex.rivera@meta.com) opened their invitation.",
+      "severity": "INFO"
+    },
+    {
+      "id": "log-1",
+      "timestamp": "2026-07-07T08:30:00-07:00",
+      "actor": "System",
+      "role": "System Engine",
+      "action": "DATABASE_INITIALIZATION",
+      "details": "EventHub database storage initialized with default configurations, point rules, and door prize thresholds.",
+      "severity": "SUCCESS"
+    },
+    {
+      "id": "log-2",
+      "timestamp": "2026-07-07T08:45:00-07:00",
+      "actor": "Staff-101",
+      "role": "Event Staff",
+      "action": "PARTICIPANT_CHECKIN",
+      "details": "Participant Alex Rivera (EH-1001) successfully checked in. 5 attendance points awarded and badge printed.",
+      "severity": "SUCCESS"
+    },
+    {
+      "id": "log-3",
+      "timestamp": "2026-07-07T08:52:15-07:00",
+      "actor": "Staff-101",
+      "role": "Event Staff",
+      "action": "PARTICIPANT_CHECKIN",
+      "details": "Participant Sarah Chen (EH-1002) checked in at front VIP gate. Badge printed successfully.",
+      "severity": "SUCCESS"
+    }
+  ],
+  "eventsList": [
+    {
+      "id": "evt-2026",
+      "name": "EventHub Global Tech Summit 2026",
+      "venue": "Grand Ballroom, Tech Plaza Hotel, San Francisco",
+      "date": "2026-07-15",
+      "time": "09:00 AM - 05:00 PM",
+      "isArchived": false,
+      "createdAt": "2026-01-10T08:00:00Z",
+      "description": "The premiere event for SaaS developers, designers, and managers globally.",
+      "showLeaderboardRank": true,
+      "venueDetails": {
+        "ballroom": "Grand Ballroom, Section A & B",
+        "capacity": 500,
+        "address": "100 Tech Plaza Boulevard, San Francisco, CA 94107",
+        "parkingInstructions": "Valet parking available at North Tower. Underground self-parking validated up to 8 hours.",
+        "googleMapsUrl": "https://maps.google.com/?q=Grand+Ballroom,+Tech+Plaza+Hotel,+San+Francisco"
+      },
+      "schedule": [
+        {
+          "id": "sch-1",
+          "time": "08:30 AM - 09:30 AM",
+          "activity": "Guest Arrival & QR Check-In",
+          "description": "Collect badge and register attendance at the front desk"
+        },
+        {
+          "id": "sch-2",
+          "time": "09:30 AM - 11:00 AM",
+          "activity": "Opening Keynote & AI Tech Trends",
+          "description": "Opening session featuring key tech highlights in Grand Ballroom"
+        },
+        {
+          "id": "sch-3",
+          "time": "11:00 AM - 12:30 PM",
+          "activity": "Panel Discussion: Future of SaaS",
+          "description": "Expert insights panel with corporate leaders and Q&A"
+        },
+        {
+          "id": "sch-4",
+          "time": "12:30 PM - 02:00 PM",
+          "activity": "Networking Lunch & Photo Wall Sharing",
+          "description": "Connect with peers, check-in at sponsor booths and snap photo stories"
+        },
+        {
+          "id": "sch-5",
+          "time": "02:00 PM - 03:30 PM",
+          "activity": "Interactive Product Demos",
+          "description": "Live booths exploration and hands-on developer sandbox sessions"
+        },
+        {
+          "id": "sch-6",
+          "time": "03:30 PM - 04:15 PM",
+          "activity": "Song Requests & Live Band Performance",
+          "description": "Submit your favorite tracks and enjoy live ambient band tunes"
+        },
+        {
+          "id": "sch-7",
+          "time": "04:15 PM - 05:00 PM",
+          "activity": "Lucky Draw Wheel Spinner & Door Prizes",
+          "description": "Grand draw session for eligible participants based on milestone score"
+        },
+        {
+          "id": "sch-8",
+          "time": "05:00 PM - 05:30 PM",
+          "activity": "Closing Remarks & Event Day Wrap-up",
+          "description": "Closing highlights, feedback forms collection and swag distribution"
+        }
+      ],
+      "seatingLayout": {
+        "tablesCount": 12,
+        "seatsPerTable": 8,
+        "vipTablesCount": 3,
+        "assignmentMode": "AUTO"
+      },
+      "pointRules": {
+        "CHECK_IN": 5,
+        "FEEDBACK": 5,
+        "PHOTO_UPLOAD": 5,
+        "INSTAGRAM_POST": 5,
+        "SONG_REQUEST": 5,
+        "STAFF_BEST_PHOTO": 5,
+        "STAFF_ACTIVE": 5,
+        "NETWORKING": 15,
+        "CUSTOM": 5
+      },
+      "activities": [
+        {
+          "id": "act-cfg-1",
+          "type": "CHECK_IN",
+          "name": "Summit Gate Check-In",
+          "isEnabled": true,
+          "requireApproval": false,
+          "validationMethod": "AUTOMATIC"
+        },
+        {
+          "id": "act-cfg-2",
+          "type": "FEEDBACK",
+          "name": "Anonymous Feedback Form",
+          "isEnabled": true,
+          "requireApproval": false,
+          "validationMethod": "AUTOMATIC"
+        },
+        {
+          "id": "act-cfg-3",
+          "type": "PHOTO_UPLOAD",
+          "name": "Photo Wall Upload",
+          "isEnabled": true,
+          "requireApproval": true,
+          "validationMethod": "STAFF_APPROVAL"
+        },
+        {
+          "id": "act-cfg-4",
+          "type": "INSTAGRAM_POST",
+          "name": "Social Media Outreach",
+          "isEnabled": true,
+          "requireApproval": true,
+          "validationMethod": "STAFF_APPROVAL"
+        },
+        {
+          "id": "act-cfg-5",
+          "type": "SONG_REQUEST",
+          "name": "Stage Song Request",
+          "isEnabled": true,
+          "requireApproval": true,
+          "validationMethod": "STAFF_APPROVAL"
+        },
+        {
+          "id": "act-cfg-6",
+          "type": "NETWORKING",
+          "name": "Attendee Networking Challenge",
+          "isEnabled": true,
+          "requireApproval": false,
+          "validationMethod": "QR_SCAN",
+          "points": 15
+        }
+      ],
+      "sponsorBooths": [
+        {
+          "id": "sb-1",
+          "name": "Google Cloud",
+          "boothCode": "BOOTH-101",
+          "pointsReward": 10,
+          "locationDescription": "East Expo Corridor - Row A"
+        },
+        {
+          "id": "sb-2",
+          "name": "Stripe",
+          "boothCode": "BOOTH-102",
+          "pointsReward": 10,
+          "locationDescription": "Main Entrance Lounge - Booth B"
+        },
+        {
+          "id": "sb-3",
+          "name": "Vercel Platforms",
+          "boothCode": "BOOTH-103",
+          "pointsReward": 15,
+          "locationDescription": "Developer Pavilion - Center"
+        }
+      ],
+      "luckyDrawCategories": [
+        {
+          "id": "ld-1",
+          "name": "Grand Prize",
+          "eligiblePointsMin": 21,
+          "prizeName": "Apple MacBook Pro 16\"",
+          "quantity": 1
+        },
+        {
+          "id": "ld-2",
+          "name": "Gold Prize",
+          "eligiblePointsMin": 11,
+          "prizeName": "Apple iPad Pro 11\"",
+          "quantity": 2
+        },
+        {
+          "id": "ld-3",
+          "name": "Silver Prize",
+          "eligiblePointsMin": 5,
+          "prizeName": "Sony WH-1000XM5 Headphones",
+          "quantity": 3
+        }
+      ],
+      "prizes": [
+        {
+          "id": "prz-1",
+          "name": "MacBook Pro 16\"",
+          "description": "M3 Max Chip, 36GB RAM, 1TB SSD Space Black",
+          "stock": 1,
+          "pointsRequiredToRedeem": 100
+        },
+        {
+          "id": "prz-2",
+          "name": "iPad Pro 11\"",
+          "description": "M4 OLED Display, 256GB WiFi Silver",
+          "stock": 2,
+          "pointsRequiredToRedeem": 60
+        },
+        {
+          "id": "prz-3",
+          "name": "Sony WH-1000XM5",
+          "description": "Wireless Noise Cancelling Over-Ear Headphones",
+          "stock": 3,
+          "pointsRequiredToRedeem": 30
+        }
+      ],
+      "registrationForm": {
+        "requireCompany": true,
+        "requirePosition": true,
+        "requirePhone": true,
+        "requireFoodAllergies": false,
+        "customDisclaimer": "By RSVPing, you consent to receive event alerts and photos upload permissions.",
+        "isEnabled": true
+      },
+      "emailTemplates": {
+        "h7Subject": "Welcome to EventHub Global Tech Summit 2026 - Invitation",
+        "h7Body": "Dear {{GUEST_NAME}},\n\nYou are cordially invited to attend the EventHub Global Tech Summit 2026 in San Francisco! Please verify your RSVP parameters.\n\nBest Regards,\nEvent Team",
+        "h3Subject": "Only 3 Days Left! Tech Summit Schedule and Seating",
+        "h3Body": "Hi {{GUEST_NAME}},\n\nGet ready! We're only 3 days away from opening keynote doors. Find your table number in your portal.\n\nSee you soon!",
+        "h1Subject": "Tomorrow! QR Entrance Pass Info",
+        "h1Body": "Hello {{GUEST_NAME}},\n\nYour digital wallet pass and QR entry code is ready for check-in. Don't forget to have it scanned at Desk A.\n\nCheers!",
+        "dayOfSubject": "Live Event Day: Welcome!",
+        "dayOfBody": "Welcome to the Tech Summit {{GUEST_NAME}}!\n\nSubmit photos, songs, and complete feedback to claim cool merchandise.\n\nHave fun!"
+      },
+      "whatsappTemplates": {
+        "h7Message": "Hi {{GUEST_NAME}}! You're invited to {{EVENT_NAME}} on {{EVENT_DATE}}. Click here to confirm RSVP: {{PASS_LINK}}",
+        "h3Message": "Hello {{GUEST_NAME}}! Only 3 days left until {{EVENT_NAME}}. View your table and seat details at {{PASS_LINK}}",
+        "h1Message": "Urgent: {{GUEST_NAME}}, your entrance pass for tomorrow's summit is ready! Scan at reception Desk: {{PASS_LINK}}",
+        "dayOfMessage": "Welcome to {{EVENT_NAME}}! Join the leaderboard, request songs and gain cool prizes today: {{PASS_LINK}}"
+      }
+    },
+    {
+      "id": "evt-2025",
+      "name": "SaaS Summit & Expo 2025",
+      "venue": "Moscone Center West, Hall C, San Francisco",
+      "date": "2025-10-12",
+      "time": "08:30 AM - 06:00 PM",
+      "isArchived": true,
+      "createdAt": "2025-05-12T09:00:00Z",
+      "description": "The 2025 iteration of our landmark SaaS expo centering next-gen server architectures.",
+      "showLeaderboardRank": true,
+      "venueDetails": {
+        "ballroom": "Exhibition Hall C, Level 2",
+        "capacity": 1200,
+        "address": "800 Howard St, San Francisco, CA 94103",
+        "parkingInstructions": "Public garage parking across from main atrium."
+      },
+      "schedule": [
+        {
+          "id": "sch-25-1",
+          "time": "08:30 AM - 10:00 AM",
+          "activity": "Doors Open & Coffee Networking"
+        },
+        {
+          "id": "sch-25-2",
+          "time": "10:00 AM - 12:00 PM",
+          "activity": "SaaS Ecosystem Keynote"
+        },
+        {
+          "id": "sch-25-3",
+          "time": "12:00 PM - 03:00 PM",
+          "activity": "Catered Lunch & Vendor Demos"
+        },
+        {
+          "id": "sch-25-4",
+          "time": "03:00 PM - 04:30 PM",
+          "activity": "Lucky Draws & Vendor Spot Prizes"
+        }
+      ],
+      "seatingLayout": {
+        "tablesCount": 25,
+        "seatsPerTable": 10,
+        "vipTablesCount": 5,
+        "assignmentMode": "FIRST_COME"
+      },
+      "pointRules": {
+        "CHECK_IN": 10,
+        "FEEDBACK": 10,
+        "PHOTO_UPLOAD": 5,
+        "INSTAGRAM_POST": 15,
+        "SONG_REQUEST": 5,
+        "STAFF_BEST_PHOTO": 20,
+        "STAFF_ACTIVE": 10,
+        "NETWORKING": 15,
+        "CUSTOM": 10
+      },
+      "activities": [
+        {
+          "id": "act-25-1",
+          "type": "CHECK_IN",
+          "name": "Moscone Expo Entry scan",
+          "isEnabled": true,
+          "requireApproval": false,
+          "validationMethod": "AUTOMATIC"
+        },
+        {
+          "id": "act-25-2",
+          "type": "FEEDBACK",
+          "name": "Moscone Feedback Exit survey",
+          "isEnabled": true,
+          "requireApproval": false,
+          "validationMethod": "AUTOMATIC"
+        },
+        {
+          "id": "act-25-3",
+          "type": "NETWORKING",
+          "name": "Attendee Networking Challenge",
+          "isEnabled": true,
+          "requireApproval": false,
+          "validationMethod": "QR_SCAN",
+          "points": 15
+        }
+      ],
+      "sponsorBooths": [
+        {
+          "id": "sb-25-1",
+          "name": "Amazon Web Services",
+          "boothCode": "AWS-401",
+          "pointsReward": 20,
+          "locationDescription": "Moscone Main Floor - Island B"
+        },
+        {
+          "id": "sb-25-2",
+          "name": "GitHub",
+          "boothCode": "GH-402",
+          "pointsReward": 15,
+          "locationDescription": "Social Hub Space"
+        }
+      ],
+      "luckyDrawCategories": [
+        {
+          "id": "ld-25-1",
+          "name": "Mega Prize",
+          "eligiblePointsMin": 30,
+          "prizeName": "Sony PlayStation 5 Pro",
+          "quantity": 1
+        }
+      ],
+      "prizes": [
+        {
+          "id": "prz-25-1",
+          "name": "PlayStation 5 Pro",
+          "description": "Standard Digital Bundle with controller",
+          "stock": 1,
+          "pointsRequiredToRedeem": 120
+        }
+      ],
+      "registrationForm": {
+        "requireCompany": true,
+        "requirePosition": false,
+        "requirePhone": true,
+        "requireFoodAllergies": true,
+        "customDisclaimer": "Moscone Center privacy regulations apply.",
+        "isEnabled": true
+      },
+      "emailTemplates": {
+        "h7Subject": "Your Ticket to SaaS Summit 2025",
+        "h7Body": "Hi {{GUEST_NAME}},\n\nYour Moscone badge is reserved.",
+        "h3Subject": "Moscone Center Seating & Schedule",
+        "h3Body": "Hi {{GUEST_NAME}},\n\nOnly 3 days left until Moscone Doors open.",
+        "h1Subject": "Tomorrow! Badge Collection Info",
+        "h1Body": "Hi {{GUEST_NAME}},\n\nCollect your physical badge tomorrow.",
+        "dayOfSubject": "SaaS Summit 2025: Live Now",
+        "dayOfBody": "Welcome to SaaS Summit 2025!"
+      },
+      "whatsappTemplates": {
+        "h7Message": "Hi {{GUEST_NAME}}! Confirm your badge at {{PASS_LINK}}",
+        "h3Message": "Hello {{GUEST_NAME}}! 3 days left. Details at {{PASS_LINK}}",
+        "h1Message": "SaaS Summit tomorrow! Info: {{PASS_LINK}}",
+        "dayOfMessage": "Live now! Join at {{PASS_LINK}}"
+      }
+    }
+  ],
+  "boothVisits": [
+    {
+      "id": "visit-1784593959535-346",
+      "participantId": "EH-1007",
+      "participantName": "Clara Dupont",
+      "participantEmail": "c.dupont@spotify.com",
+      "participantCompany": "Spotify AB",
+      "participantPosition": "Infrastructure Lead",
+      "boothId": "sb-1",
+      "boothName": "Google Cloud",
+      "boothCode": "BOOTH-101",
+      "pointsAwarded": 10,
+      "visitedAt": "2026-07-21T00:32:39.535Z"
+    }
+  ],
+  "networkingConnections": [],
+  "whitelistedEmails": [
+    "manager@eventhub.com",
+    "prof.a.wicaksono@gmail.com",
+    "manager.rudi@eventhub.com",
+    "manager.ani@eventhub.com"
+  ],
+  "users": [
+    {
+      "id": "user-superadmin",
+      "email": "alfian.n.wicaksono@gmail.com",
+      "name": "Alfian Wicaksono",
+      "role": "SUPER_ADMIN",
+      "password": "SuperAdmin2026!",
+      "createdAt": "2026-07-21T02:52:58.933Z"
+    },
+    {
+      "id": "user-1784602867417",
+      "email": "prof.a.wicaksono@gmail.com",
+      "name": "Prof ANW",
+      "role": "EVENT_MANAGER",
+      "password": "123456",
+      "createdAt": "2026-07-21T03:01:07.417Z"
+    },
+    {
+      "id": "user-1784603623278",
+      "email": "staff@eventhub.com",
+      "name": "staff even jkt",
+      "role": "EVENT_STAFF",
+      "password": "123456",
+      "createdAt": "2026-07-21T03:13:43.278Z"
+    },
+    {
+      "id": "user-staff-1",
+      "email": "staff.budi@eventhub.com",
+      "name": "Staff Budi",
+      "role": "EVENT_STAFF",
+      "password": "password123",
+      "createdAt": "2026-07-21T03:20:00.000Z"
+    },
+    {
+      "id": "user-staff-2",
+      "email": "staff.siti@eventhub.com",
+      "name": "Staff Siti",
+      "role": "EVENT_STAFF",
+      "password": "password123",
+      "createdAt": "2026-07-21T03:21:00.000Z"
+    },
+    {
+      "id": "user-staff-3",
+      "email": "staff.iwan@eventhub.com",
+      "name": "Staff Iwan",
+      "role": "EVENT_STAFF",
+      "password": "password123",
+      "createdAt": "2026-07-21T03:22:00.000Z"
+    },
+    {
+      "id": "user-manager-1",
+      "email": "manager.rudi@eventhub.com",
+      "name": "Manager Rudi",
+      "role": "EVENT_MANAGER",
+      "password": "password123",
+      "createdAt": "2026-07-21T03:25:00.000Z"
+    },
+    {
+      "id": "user-manager-2",
+      "email": "manager.ani@eventhub.com",
+      "name": "Manager Ani",
+      "role": "EVENT_MANAGER",
+      "password": "password123",
+      "createdAt": "2026-07-21T03:26:00.000Z"
+    }
+  ],
+  "whitelistedStaffEmails": [
+    "staff@eventhub.com",
+    "staff.budi@eventhub.com",
+    "staff.siti@eventhub.com",
+    "staff.iwan@eventhub.com"
+  ]
+}
