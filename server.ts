@@ -1081,7 +1081,6 @@ app.post("/api/invitations/send", async (req, res) => {
 
                   <!-- 1. Personalized Greeting -->
                   <div style="margin-bottom: 20px;">
-                    <span style="font-weight: bold; color: #3730a3; text-transform: uppercase; font-size: 9px; letter-spacing: 1px; display: block;">[ 1. Personalized Greeting ]</span>
                     <p style="font-size: 12px; color: #475569; line-height: 1.6; white-space: pre-wrap; margin-top: 8px;">${textBody}</p>
                   </div>
 
@@ -1105,7 +1104,7 @@ app.post("/api/invitations/send", async (req, res) => {
 
                   <!-- 2. Agenda Timeline -->
                   <div style="margin-bottom: 20px;">
-                    <span style="font-weight: bold; color: #3730a3; text-transform: uppercase; font-size: 9px; letter-spacing: 1px; display: block; margin-bottom: 8px;">[ 2. Agenda Timeline ]</span>
+                    <span style="font-weight: bold; color: #3730a3; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; display: block; margin-bottom: 8px;">Agenda Timeline</span>
                     <div style="border: 1px solid #e2e8f0; background-color: #f8fafc; padding: 4px;">
                       ${scheduleHtml}
                     </div>
@@ -1113,10 +1112,12 @@ app.post("/api/invitations/send", async (req, res) => {
 
                   <!-- 3. Interactive Guest Actions -->
                   <div style="margin-bottom: 20px;">
-                    <span style="font-weight: bold; color: #3730a3; text-transform: uppercase; font-size: 9px; letter-spacing: 1px; display: block;">[ 3. Interactive Guest Actions ]</span>
                     
                     <div style="margin-top: 12px; text-align: center;">
-                      <a href="${rsvpLink}" target="_blank" style="background-color: #141414; color: #ffffff; padding: 12px 24px; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; display: inline-block; border: 2px solid #141414;">
+                      <a href="${origin}/api/invitations/calendar?id=${participant.id}" target="_blank" style="background-color: #f1f5f9; color: #475569; padding: 12px 20px; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; display: inline-block; border: 2px solid #cbd5e1; margin-bottom: 8px; margin-right: 8px;">
+                        📅 Download Calendar Invite (.ics)
+                      </a>
+                      <a href="${rsvpLink}" target="_blank" style="background-color: #141414; color: #ffffff; padding: 12px 20px; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; display: inline-block; border: 2px solid #141414; margin-bottom: 8px;">
                         Confirm RSVP / Digital Pass
                       </a>
                     </div>
@@ -1129,7 +1130,6 @@ app.post("/api/invitations/send", async (req, res) => {
 
                   <!-- 4. Venue Coordinates & Location -->
                   <div style="margin-bottom: 10px;">
-                    <span style="font-weight: bold; color: #3730a3; text-transform: uppercase; font-size: 9px; letter-spacing: 1px; display: block; margin-bottom: 8px;">[ 4. Venue Coordinates & Location ]</span>
                     
                     <div style="border: 1px solid #cbd5e1; padding: 12px; background-color: #f5f3ff;">
                       <table style="width: 100%; border-collapse: collapse; font-family: 'Courier New', Courier, monospace; font-size: 10px;">
@@ -1213,6 +1213,65 @@ app.post("/api/invitations/send", async (req, res) => {
     }
   } catch (err: any) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// Serve direct dynamic .ics calendar invite download
+app.get("/api/invitations/calendar", (req, res) => {
+  try {
+    const { id } = req.query;
+    if (!id) {
+      return res.status(400).send("Participant ID is required");
+    }
+
+    const participant = db.participants.find(p => p.id === id);
+    if (!participant) {
+      return res.status(404).send("Participant not found");
+    }
+
+    const title = db.eventConfig?.name || "EventHub Global Summit 2026";
+    const venue = db.eventConfig?.venue || "Grand Ballroom, Tech Plaza";
+    const rawDate = db.eventConfig?.date || "2026-07-15";
+    const datePart = rawDate.replace(/-/g, "");
+
+    // Clean title for download filename
+    const filename = `${title.replace(/[^a-zA-Z0-9]/g, "_")}_Calendar_Invite.ics`;
+
+    // Base URL for links
+    let origin = db.eventConfig?.appUrl || "";
+    if (!origin && process.env.APP_URL && process.env.APP_URL !== "MY_APP_URL") {
+      origin = process.env.APP_URL;
+    }
+    if (!origin) {
+      origin = `${req.protocol}://${req.get('host')}`;
+    }
+    if (origin.endsWith("/")) {
+      origin = origin.substring(0, origin.length - 1);
+    }
+
+    const rsvpLink = `${origin}/rsvp?id=${participant.id}`;
+
+    const icsLines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//EventHub//NONSGML Invitation//EN",
+      "BEGIN:VEVENT",
+      `SUMMARY:${title}`,
+      `LOCATION:${venue}`,
+      `DESCRIPTION:Hello ${participant.name},\\n\\nYou are cordially invited to attend ${title}.\\n\\nYour Seating details: Table & seat assignment will be disclosed at Check-In upon arrival at the venue.\\n\\nManage your RSVP & View details here: ${rsvpLink}\\n\\nWe look forward to seeing you there!`,
+      `DTSTART:${datePart}T090000`,
+      `DTEND:${datePart}T170000`,
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ];
+
+    const fileContent = icsLines.join("\r\n");
+
+    res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    return res.send(fileContent);
+  } catch (err: any) {
+    return res.status(500).send(err.message);
   }
 });
 

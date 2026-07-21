@@ -96,7 +96,24 @@ export default function InvitationManager({
     `Dear [Name],\n\nYou are cordially invited to join us at the upcoming ${eventConfig?.name || 'EventHub Global Summit 2026'}.\n\nDetails:\nDate: [Date]\nTime: [Time]\nVenue: [Venue]\nGoogle Maps: [MapLink]\n\nPlease RSVP today to secure your attendance and table assignment.`
   );
   const [waMessage, setWaMessage] = useState(
-    `Hello [Name]! You are cordially invited to ${eventConfig?.name || 'EventHub Global Summit'}.\nVenue Map: [MapLink]\nRSVP today here: [Link] (Your code: [ID])`
+    `🌟 *OFFICIAL E-INVITATION* 🌟\n\n` +
+    `Dear *[Name]*,\n\n` +
+    `You are cordially invited as our esteemed guest to attend the highly anticipated *${eventConfig?.name || 'EventHub Global Summit'}*.\n\n` +
+    `Join us for a premium curated experience featuring forward-thinking presentations, valuable networking sessions with key industry leaders, and exclusive insights.\n\n` +
+    `📅 *EVENT TIMELINE & DETAILS:*\n` +
+    `• *Date:* [Date]\n` +
+    `• *Time:* [Time]\n` +
+    `• *Venue:* [Venue]\n\n` +
+    `📍 *VENUE NAVIGATION:*\n` +
+    `Get direct coordinates and routing on Google Maps here:\n` +
+    `👉 [MapLink]\n\n` +
+    `🎟️ *ACTION REQUIRED (RSVP):*\n` +
+    `Please secure your attendance, select your food preferences, and lock in your priority table assignment through our secure portal below:\n` +
+    `👉 [Link]\n` +
+    `_(Your Guest Pass ID: *[ID]*)_\n\n` +
+    `We look forward to welcoming you to this landmark event!\n\n` +
+    `Warm regards,\n` +
+    `*EventHub Executive Committee*`
   );
 
   // Synchronize input fields when eventConfig changes
@@ -509,6 +526,9 @@ export default function InvitationManager({
       .replace(/\[Name\]/g, activeParticipant.name)
       .replace(/\[Link\]/g, rsvpLink)
       .replace(/\[ID\]/g, activeParticipant.id)
+      .replace(/\[Date\]/g, eventConfig?.date || '2026-07-15')
+      .replace(/\[Time\]/g, eventConfig?.time || '09:00 AM - 05:00 PM')
+      .replace(/\[Venue\]/g, eventConfig?.venue || 'Grand Ballroom')
       .replace(/\[MapLink\]/g, eventConfig?.googleMapsUrl || 'https://maps.google.com');
   }, [activeParticipant, waMessage, eventConfig]);
 
@@ -996,17 +1016,19 @@ export default function InvitationManager({
               <div className="pt-4 border-t border-[#141414] font-mono mt-4">
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Currently Pre-Registered Database Status:</span>
                 <div className="bg-[#141414] text-[#E4E3E0] rounded-none p-3 text-[10px] font-mono leading-relaxed border border-[#141414]">
-                  <div className="flex justify-between font-bold text-[#00FF00] border-b border-neutral-700 pb-1 mb-1 text-[9px] uppercase">
-                    <span>Name</span>
-                    <span>Email</span>
-                    <span>Status</span>
+                  <div className="grid grid-cols-12 gap-2 font-bold text-[#00FF00] border-b border-neutral-700 pb-1 mb-1 text-[9px] uppercase">
+                    <span className="col-span-3">Name</span>
+                    <span className="col-span-4">Email</span>
+                    <span className="col-span-3">No HP</span>
+                    <span className="col-span-2 text-right">Status</span>
                   </div>
                   <div className="max-h-[140px] overflow-y-auto pr-1 space-y-0.5">
                     {participants.map((p, i) => (
-                      <div key={p.id || i} className="flex justify-between py-0.5 border-b border-neutral-900 text-[9px]">
-                        <span className="text-[#E4E3E0] truncate max-w-[100px]" title={p.name}>{p.name}</span>
-                        <span className="text-gray-400 truncate max-w-[130px]" title={p.email}>{p.email}</span>
-                        <span className="text-[#00FF00] font-bold uppercase shrink-0">
+                      <div key={p.id || i} className="grid grid-cols-12 gap-2 py-0.5 border-b border-neutral-900 text-[9px]">
+                        <span className="text-[#E4E3E0] truncate col-span-3" title={p.name}>{p.name}</span>
+                        <span className="text-gray-400 truncate col-span-4" title={p.email}>{p.email}</span>
+                        <span className="text-gray-400 truncate col-span-3" title={p.phone || '-'}>{p.phone || '-'}</span>
+                        <span className="text-[#00FF00] font-bold uppercase col-span-2 text-right">
                           {p.rsvpStatus === 'YES' ? 'YES' : p.rsvpStatus === 'NO' ? 'NO' : 'PENDING'}
                         </span>
                       </div>
@@ -1358,6 +1380,18 @@ export default function InvitationManager({
                             <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
                             <span>Confirm RSVP / Digital Pass</span>
                           </a>
+
+                          {selectedChannel === 'WHATSAPP' && (
+                            <a
+                              href={`https://api.whatsapp.com/send?phone=${activeParticipant.phone ? activeParticipant.phone.replace(/\D/g, '').replace(/^0/, '62') : ''}&text=${encodeURIComponent(personalizedWaMessage)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="col-span-1 sm:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-3 rounded-none flex items-center justify-center gap-2 text-center cursor-pointer font-bold uppercase text-[9px] tracking-wider border border-emerald-500 shadow-[2px_2px_0px_0px_rgba(20,20,20,1)] transition-all"
+                            >
+                              <Phone className="w-3.5 h-3.5 text-white animate-bounce" />
+                              <span>📲 Kirim via WhatsApp Chat ({activeParticipant.phone || 'No Phone'})</span>
+                            </a>
+                          )}
                         </div>
 
                         {/* Copy Link Helper */}
