@@ -153,14 +153,100 @@ export default function UnifiedLoginPortal({ onLoginSuccess, eventConfig }: Unif
     <div className="min-h-screen bg-[#E4E3E0] text-[#141414] flex flex-col items-center justify-center p-4 sm:p-6 font-sans">
       
       {/* Brand logo card */}
-      <div className="w-full max-w-md text-center mb-6">
-        <div className="inline-flex h-14 w-14 bg-[#C5F237] text-[#141414] border-2.5 border-[#141414] rounded-2xl items-center justify-center font-black text-2xl shadow-[4px_4px_0px_0px_#141414] mb-4">
-          EH
+      <div className="w-full max-w-md flex flex-col items-center justify-center mb-6">
+        {/* Joint KSO Logo Layout for Login Page */}
+        <div className="flex flex-col items-center gap-3 select-none bg-white border-2.5 border-[#141414] p-5 rounded-2xl shadow-[4px_4px_0px_0px_#141414] w-full">
+          <div className="flex items-center gap-3 justify-center w-full">
+            {/* Left Brand Text */}
+            <div className="flex flex-col text-[#141414] text-left">
+              <span className="font-sans font-black tracking-tight uppercase text-base sm:text-lg leading-[0.95]">
+                KERJASAMA
+              </span>
+              <span className="font-sans font-black tracking-tight uppercase text-base sm:text-lg leading-[0.95]">
+                OPERASI
+              </span>
+            </div>
+
+            {/* Vertical Divider */}
+            <div className="h-10 sm:h-12 w-[2px] bg-[#141414] shrink-0" />
+
+            {/* Right Logos Stack */}
+            <div className="flex items-center gap-4 sm:gap-6">
+              {/* SUCOFINDO */}
+              <div className="flex flex-col items-center">
+                <div className="relative h-7 sm:h-9 w-13 sm:w-16">
+                  <svg viewBox="0 0 100 50" className="w-full h-full">
+                    {/* Globe 1 */}
+                    <circle cx="28" cy="25" r="16" fill="none" stroke="#0092c7" strokeWidth="2" />
+                    <path d="M 28,9 A 16,16 0 0,0 28,41" fill="none" stroke="#0092c7" strokeWidth="1.5" />
+                    <path d="M 28,9 A 16,16 0 0,1 28,41" fill="none" stroke="#0092c7" strokeWidth="1.5" />
+                    <line x1="12" y1="25" x2="44" y2="25" stroke="#0092c7" strokeWidth="1.5" />
+                    <path d="M 15,17 Q 28,22 41,17" fill="none" stroke="#0092c7" strokeWidth="1" />
+                    <path d="M 15,33 Q 28,28 41,33" fill="none" stroke="#0092c7" strokeWidth="1" />
+
+                    {/* Globe 2 */}
+                    <circle cx="48" cy="25" r="16" fill="none" stroke="#0092c7" strokeWidth="2" />
+                    <path d="M 48,9 A 16,16 0 0,0 48,41" fill="none" stroke="#0092c7" strokeWidth="1.5" />
+                    <path d="M 48,9 A 16,16 0 0,1 48,41" fill="none" stroke="#0092c7" strokeWidth="1.5" />
+                    <line x1="32" y1="25" x2="64" y2="25" stroke="#0092c7" strokeWidth="1.5" />
+                    <path d="M 35,17 Q 48,22 61,17" fill="none" stroke="#0092c7" strokeWidth="1" />
+                    <path d="M 35,33 Q 48,28 61,33" fill="none" stroke="#0092c7" strokeWidth="1" />
+
+                    {/* Globe 3 */}
+                    <circle cx="68" cy="25" r="16" fill="none" stroke="#0092c7" strokeWidth="2" />
+                    <path d="M 68,9 A 16,16 0 0,0 68,41" fill="none" stroke="#0092c7" strokeWidth="1.5" />
+                    <path d="M 68,9 A 16,16 0 0,1 68,41" fill="none" stroke="#0092c7" strokeWidth="1.5" />
+                    <line x1="52" y1="25" x2="84" y2="25" stroke="#0092c7" strokeWidth="1.5" />
+                    <path d="M 55,17 Q 68,22 81,17" fill="none" stroke="#0092c7" strokeWidth="1" />
+                    <path d="M 55,33 Q 68,28 81,33" fill="none" stroke="#0092c7" strokeWidth="1" />
+
+                    {/* Checkmark Badge on Top Right */}
+                    <g transform="translate(64, 1)">
+                      <circle cx="10" cy="10" r="9" fill="#0c4a6e" />
+                      <path d="M 6,10 L 9,13 L 15,7" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </g>
+                  </svg>
+                </div>
+                <span className="font-sans font-black tracking-[0.1em] text-[7px] sm:text-[9px] text-[#141414] uppercase leading-none mt-0.5">
+                  SUCOFINDO
+                </span>
+              </div>
+
+              {/* SURVEYOR INDONESIA */}
+              <div className="flex flex-col items-center">
+                <div className="relative h-7 sm:h-9 w-9 sm:w-11">
+                  <svg viewBox="0 0 60 50" className="w-full h-full">
+                    {/* Globe */}
+                    <circle cx="30" cy="25" r="16" fill="none" stroke="#0066b2" strokeWidth="2" />
+                    <path d="M 30,9 A 16,16 0 0,0 30,41" fill="none" stroke="#0066b2" strokeWidth="1.5" />
+                    <path d="M 30,9 A 16,16 0 0,1 30,41" fill="none" stroke="#0066b2" strokeWidth="1.5" />
+                    <line x1="14" y1="25" x2="46" y2="25" stroke="#0066b2" strokeWidth="1.5" />
+                    <path d="M 17,17 Q 30,22 43,17" fill="none" stroke="#0066b2" strokeWidth="1" />
+                    <path d="M 17,33 Q 30,28 43,33" fill="none" stroke="#0066b2" strokeWidth="1" />
+                    {/* Stylized S line */}
+                    <path d="M 30,12 C 23,16 23,22 30,25 C 37,28 37,34 30,38" fill="none" stroke="#0066b2" strokeWidth="2" strokeLinecap="round" />
+
+                    {/* Checkmark Badge on Top Right */}
+                    <g transform="translate(34, 1)">
+                      <circle cx="10" cy="10" r="9" fill="#0c4a6e" />
+                      <path d="M 6,10 L 9,13 L 15,7" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </g>
+                  </svg>
+                </div>
+                <span className="font-sans font-black tracking-normal text-[7px] sm:text-[8px] text-[#0066b2] uppercase leading-none mt-0.5 whitespace-nowrap">
+                  SURVEYOR INDONESIA
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tagline across both */}
+          <div className="w-full text-center text-[9px] sm:text-[11px] text-[#0066b2] italic font-medium tracking-wide border-t border-slate-100 pt-2 font-serif">
+            Professional, Connecting, Integrated
+          </div>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-[#141414]">
-          EventHub Portal
-        </h1>
-        <p className="text-xs text-slate-600 mt-1 font-semibold max-w-xs mx-auto">
+
+        <p className="text-xs text-slate-600 mt-3 font-semibold max-w-xs mx-auto text-center">
           {eventConfig?.name || 'Live Event Check-In, RSVPs, & Gamification Engine'}
         </p>
       </div>

@@ -139,18 +139,97 @@ export default function Header({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-4">
         {/* Top brand row on mobile, full column on desktop */}
         <div className="flex items-center justify-between w-full md:w-auto">
-          <div className="flex items-center gap-3">
-            {/* EH Logo */}
-            <div className="h-9 w-9 md:h-12 md:w-12 bg-[#C5F237] text-[#141414] border-2 border-[#141414] rounded-[8px] md:rounded-[12px] flex items-center justify-center font-extrabold text-base md:text-lg font-display shadow-[2px_2px_0px_0px_#141414] shrink-0">
-              EH
+          {/* Joint KSO Logo Layout */}
+          <div className="flex items-center gap-2.5 md:gap-4 select-none py-1">
+            {/* Left Brand Text */}
+            <div className="flex flex-col text-[#141414] text-left">
+              <span className="font-sans font-black tracking-tight uppercase text-[10px] md:text-[18px] leading-[0.95]">
+                KERJASAMA
+              </span>
+              <span className="font-sans font-black tracking-tight uppercase text-[10px] md:text-[18px] leading-[0.95]">
+                OPERASI
+              </span>
             </div>
-            <div className="flex flex-col justify-center">
-              <h1 className="text-base md:text-2xl font-extrabold text-[#141414] font-display tracking-tight uppercase flex items-center gap-1.5 leading-none md:leading-snug">
-                EventHub <span className="text-[8px] md:text-[9px] font-mono bg-[#141414] text-white px-1.5 py-0.5 rounded-[4px] font-bold uppercase tracking-wider">PROD</span>
-              </h1>
-              <p className="hidden md:block text-xs font-sans text-slate-600 mt-1 font-medium leading-normal">
-                {eventConfig?.name || 'Live Event & Gamification Platform'}
-              </p>
+
+            {/* Vertical Divider */}
+            <div className="h-8 md:h-12 w-[1.5px] md:w-[2px] bg-[#141414] shrink-0" />
+
+            {/* Right Logos Stack */}
+            <div className="flex flex-col gap-0.5 md:gap-1 text-left">
+              <div className="flex items-center gap-3 md:gap-6">
+                {/* SUCOFINDO */}
+                <div className="flex flex-col items-center">
+                  {/* Three globes + checkmark SVG */}
+                  <div className="relative h-6 md:h-9 w-12 md:w-16">
+                    <svg viewBox="0 0 100 50" className="w-full h-full">
+                      {/* Globe 1 */}
+                      <circle cx="28" cy="25" r="16" fill="none" stroke="#0092c7" strokeWidth="2" />
+                      <path d="M 28,9 A 16,16 0 0,0 28,41" fill="none" stroke="#0092c7" strokeWidth="1.5" />
+                      <path d="M 28,9 A 16,16 0 0,1 28,41" fill="none" stroke="#0092c7" strokeWidth="1.5" />
+                      <line x1="12" y1="25" x2="44" y2="25" stroke="#0092c7" strokeWidth="1.5" />
+                      <path d="M 15,17 Q 28,22 41,17" fill="none" stroke="#0092c7" strokeWidth="1" />
+                      <path d="M 15,33 Q 28,28 41,33" fill="none" stroke="#0092c7" strokeWidth="1" />
+
+                      {/* Globe 2 */}
+                      <circle cx="48" cy="25" r="16" fill="none" stroke="#0092c7" strokeWidth="2" />
+                      <path d="M 48,9 A 16,16 0 0,0 48,41" fill="none" stroke="#0092c7" strokeWidth="1.5" />
+                      <path d="M 48,9 A 16,16 0 0,1 48,41" fill="none" stroke="#0092c7" strokeWidth="1.5" />
+                      <line x1="32" y1="25" x2="64" y2="25" stroke="#0092c7" strokeWidth="1.5" />
+                      <path d="M 35,17 Q 48,22 61,17" fill="none" stroke="#0092c7" strokeWidth="1" />
+                      <path d="M 35,33 Q 48,28 61,33" fill="none" stroke="#0092c7" strokeWidth="1" />
+
+                      {/* Globe 3 */}
+                      <circle cx="68" cy="25" r="16" fill="none" stroke="#0092c7" strokeWidth="2" />
+                      <path d="M 68,9 A 16,16 0 0,0 68,41" fill="none" stroke="#0092c7" strokeWidth="1.5" />
+                      <path d="M 68,9 A 16,16 0 0,1 68,41" fill="none" stroke="#0092c7" strokeWidth="1.5" />
+                      <line x1="52" y1="25" x2="84" y2="25" stroke="#0092c7" strokeWidth="1.5" />
+                      <path d="M 55,17 Q 68,22 81,17" fill="none" stroke="#0092c7" strokeWidth="1" />
+                      <path d="M 55,33 Q 68,28 81,33" fill="none" stroke="#0092c7" strokeWidth="1" />
+
+                      {/* Checkmark Badge on Top Right */}
+                      <g transform="translate(64, 1)">
+                        <circle cx="10" cy="10" r="9" fill="#0c4a6e" />
+                        <path d="M 6,10 L 9,13 L 15,7" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </g>
+                    </svg>
+                  </div>
+                  <span className="font-sans font-black tracking-[0.1em] text-[5.5px] md:text-[9px] text-[#141414] uppercase leading-none mt-0.5">
+                    SUCOFINDO
+                  </span>
+                </div>
+
+                {/* SURVEYOR INDONESIA */}
+                <div className="flex flex-col items-center">
+                  {/* Single globe + checkmark SVG */}
+                  <div className="relative h-6 md:h-9 w-8 md:w-11">
+                    <svg viewBox="0 0 60 50" className="w-full h-full">
+                      {/* Globe */}
+                      <circle cx="30" cy="25" r="16" fill="none" stroke="#0066b2" strokeWidth="2" />
+                      <path d="M 30,9 A 16,16 0 0,0 30,41" fill="none" stroke="#0066b2" strokeWidth="1.5" />
+                      <path d="M 30,9 A 16,16 0 0,1 30,41" fill="none" stroke="#0066b2" strokeWidth="1.5" />
+                      <line x1="14" y1="25" x2="46" y2="25" stroke="#0066b2" strokeWidth="1.5" />
+                      <path d="M 17,17 Q 30,22 43,17" fill="none" stroke="#0066b2" strokeWidth="1" />
+                      <path d="M 17,33 Q 30,28 43,33" fill="none" stroke="#0066b2" strokeWidth="1" />
+                      {/* Stylized S line */}
+                      <path d="M 30,12 C 23,16 23,22 30,25 C 37,28 37,34 30,38" fill="none" stroke="#0066b2" strokeWidth="2" strokeLinecap="round" />
+
+                      {/* Checkmark Badge on Top Right */}
+                      <g transform="translate(34, 1)">
+                        <circle cx="10" cy="10" r="9" fill="#0c4a6e" />
+                        <path d="M 6,10 L 9,13 L 15,7" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </g>
+                    </svg>
+                  </div>
+                  <span className="font-sans font-black tracking-normal text-[5.5px] md:text-[8px] text-[#0066b2] uppercase leading-none mt-0.5 whitespace-nowrap">
+                    SURVEYOR INDONESIA
+                  </span>
+                </div>
+              </div>
+
+              {/* Tagline across both */}
+              <div className="text-[6.5px] md:text-[10.5px] text-[#0066b2] italic font-medium tracking-wide leading-none border-t border-slate-100 pt-0.5 md:pt-1 font-serif">
+                Professional, Connecting, Integrated
+              </div>
             </div>
           </div>
 
