@@ -190,7 +190,10 @@
   color: #141414;
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   border-radius: 12px !important;
-  padding: 10px 14px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-right: 14px;
+  padding-left: 14px;
   font-size: 12px;
   outline: none;
   box-shadow: 2px 2px 0px 0px #141414;

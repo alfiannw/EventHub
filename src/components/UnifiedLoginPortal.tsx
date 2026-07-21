@@ -156,25 +156,25 @@ export default function UnifiedLoginPortal({ onLoginSuccess, eventConfig }: Unif
       <div className="w-full max-w-md flex flex-col items-center justify-center mb-6">
         {/* Joint KSO Logo Layout for Login Page */}
         <div className="flex flex-col items-center gap-3 select-none bg-white border-2.5 border-[#141414] p-5 rounded-2xl shadow-[4px_4px_0px_0px_#141414] w-full">
-          <div className="flex items-center gap-3 justify-center w-full">
+          <div className="flex items-center gap-3 sm:gap-4 justify-between w-full px-1">
             {/* Left Brand Text */}
-            <div className="flex flex-col text-[#141414] text-left">
-              <span className="font-sans font-black tracking-tight uppercase text-base sm:text-lg leading-[0.95]">
+            <div className="flex flex-col text-[#141414] text-left shrink-0">
+              <span className="font-sans font-black tracking-tight uppercase text-xs sm:text-base leading-snug">
                 KERJASAMA
               </span>
-              <span className="font-sans font-black tracking-tight uppercase text-base sm:text-lg leading-[0.95]">
+              <span className="font-sans font-black tracking-tight uppercase text-xs sm:text-base leading-snug">
                 OPERASI
               </span>
             </div>
 
             {/* Vertical Divider */}
-            <div className="h-10 sm:h-12 w-[2px] bg-[#141414] shrink-0" />
+            <div className="h-9 sm:h-11 w-[2px] bg-[#141414] shrink-0 mx-1" />
 
             {/* Right Logos Stack */}
-            <div className="flex items-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-3 sm:gap-5 shrink-0">
               {/* SUCOFINDO */}
-              <div className="flex flex-col items-center">
-                <div className="relative h-7 sm:h-9 w-13 sm:w-16">
+              <div className="flex flex-col items-center shrink-0">
+                <div className="relative h-6 sm:h-8 w-11 sm:w-14">
                   <svg viewBox="0 0 100 50" className="w-full h-full">
                     {/* Globe 1 */}
                     <circle cx="28" cy="25" r="16" fill="none" stroke="#0092c7" strokeWidth="2" />
@@ -207,14 +207,14 @@ export default function UnifiedLoginPortal({ onLoginSuccess, eventConfig }: Unif
                     </g>
                   </svg>
                 </div>
-                <span className="font-sans font-black tracking-[0.1em] text-[7px] sm:text-[9px] text-[#141414] uppercase leading-none mt-0.5">
+                <span className="font-sans font-black tracking-wider text-[7px] sm:text-[8px] text-[#141414] uppercase leading-tight mt-1 whitespace-nowrap">
                   SUCOFINDO
                 </span>
               </div>
 
               {/* SURVEYOR INDONESIA */}
-              <div className="flex flex-col items-center">
-                <div className="relative h-7 sm:h-9 w-9 sm:w-11">
+              <div className="flex flex-col items-center shrink-0">
+                <div className="relative h-6 sm:h-8 w-8 sm:w-10">
                   <svg viewBox="0 0 60 50" className="w-full h-full">
                     {/* Globe */}
                     <circle cx="30" cy="25" r="16" fill="none" stroke="#0066b2" strokeWidth="2" />
@@ -233,7 +233,7 @@ export default function UnifiedLoginPortal({ onLoginSuccess, eventConfig }: Unif
                     </g>
                   </svg>
                 </div>
-                <span className="font-sans font-black tracking-normal text-[7px] sm:text-[8px] text-[#0066b2] uppercase leading-none mt-0.5 whitespace-nowrap">
+                <span className="font-sans font-black tracking-normal text-[6.5px] sm:text-[7.5px] text-[#0066b2] uppercase leading-tight mt-1 whitespace-nowrap">
                   SURVEYOR INDONESIA
                 </span>
               </div>
@@ -329,14 +329,14 @@ export default function UnifiedLoginPortal({ onLoginSuccess, eventConfig }: Unif
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                 <input
                   type="email"
                   required
                   placeholder="name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="tech-input w-full pl-10"
+                  className="tech-input w-full !pl-10"
                 />
               </div>
             </div>
@@ -346,14 +346,14 @@ export default function UnifiedLoginPortal({ onLoginSuccess, eventConfig }: Unif
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                 <input
                   type="password"
                   required
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="tech-input w-full pl-10"
+                  className="tech-input w-full !pl-10"
                 />
               </div>
             </div>
@@ -420,14 +420,14 @@ export default function UnifiedLoginPortal({ onLoginSuccess, eventConfig }: Unif
                 Full Name
               </label>
               <div className="relative">
-                <User className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
                   required
                   placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="tech-input w-full pl-10"
+                  className="tech-input w-full !pl-10"
                 />
               </div>
             </div>
@@ -437,14 +437,14 @@ export default function UnifiedLoginPortal({ onLoginSuccess, eventConfig }: Unif
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                 <input
                   type="email"
                   required
                   placeholder="name@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="tech-input w-full pl-10"
+                  className="tech-input w-full !pl-10"
                 />
               </div>
             </div>
@@ -454,14 +454,14 @@ export default function UnifiedLoginPortal({ onLoginSuccess, eventConfig }: Unif
                 Choose Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                 <input
                   type="password"
                   required
                   placeholder="Minimum 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="tech-input w-full pl-10"
+                  className="tech-input w-full !pl-10"
                 />
               </div>
             </div>
@@ -501,13 +501,13 @@ export default function UnifiedLoginPortal({ onLoginSuccess, eventConfig }: Unif
                     Phone Number
                   </label>
                   <div className="relative">
-                    <Smartphone className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                    <Smartphone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                     <input
                       type="tel"
                       placeholder="+62 812-3456-7890"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="tech-input w-full pl-10 text-xs"
+                      className="tech-input w-full !pl-10 text-xs"
                     />
                   </div>
                 </div>
