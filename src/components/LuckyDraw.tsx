@@ -27,6 +27,7 @@ export default function LuckyDraw({
   const [spinWinner, setSpinWinner] = useState<LuckyDrawWinner | null>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [confirmReset, setConfirmReset] = useState(false);
 
   // Audio simulator (using Web Audio API for actual arcade bell chime sounds!)
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -292,17 +293,25 @@ export default function LuckyDraw({
               <Download className="w-3.5 h-3.5" />
               <span>Export CSV</span>
             </button>
-            <button
+             <button
               onClick={async () => {
-                if (confirm("Are you sure you want to purge all winners history for a new lucky draw session?")) {
-                  await onResetWinners();
+                if (!confirmReset) {
+                  setConfirmReset(true);
+                  setTimeout(() => setConfirmReset(false), 4000);
+                  return;
                 }
+                setConfirmReset(false);
+                await onResetWinners();
               }}
               disabled={winners.length === 0}
-              className="bg-rose-50 hover:bg-rose-100 text-rose-800 py-1.5 px-3 border-[1.5px] border-rose-300 font-bold uppercase transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className={`py-1.5 px-3 border-[1.5px] font-bold uppercase transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                confirmReset 
+                  ? 'bg-amber-100 border-amber-400 text-amber-800 animate-pulse' 
+                  : 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-300'
+              }`}
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Redraw / Reset All</span>
+              <span>{confirmReset ? 'CONFIRM RESET? (CLICK AGAIN)' : 'Redraw / Reset All'}</span>
             </button>
           </div>
         </div>

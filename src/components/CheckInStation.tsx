@@ -15,6 +15,7 @@ interface CheckInStationProps {
   onAwardCustomPoints: (participantId: string, activityType: string, description: string) => Promise<void>;
   onUpdateSongStatus: (songId: string, status: 'APPROVED' | 'REJECTED' | 'PLAYED') => Promise<void>;
   eventConfig?: EventConfig | null;
+  onToggleApprove?: (id: string, approved: boolean) => Promise<void>;
 }
 
 export default function CheckInStation({
@@ -25,12 +26,13 @@ export default function CheckInStation({
   onApproveActivity,
   onAwardCustomPoints,
   onUpdateSongStatus,
-  eventConfig
+  eventConfig,
+  onToggleApprove
 }: CheckInStationProps) {
   
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [guestFilter, setGuestFilter] = useState<'ALL' | 'CHECKED_IN' | 'NOT_CHECKED_IN'>('ALL');
+  const [guestFilter, setGuestFilter] = useState<'ALL' | 'CHECKED_IN' | 'NOT_CHECKED_IN' | 'AWAITING_APPROVAL'>('ALL');
   
   // Selected guest for Verification Modal/Profile
   const [selectedForCheckin, setSelectedForCheckin] = useState<Participant | null>(null);
@@ -637,8 +639,9 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
       p.id.toLowerCase().includes(query)
     );
     
-    if (guestFilter === 'CHECKED_IN') return matchesSearch && p.checkedIn;
-    if (guestFilter === 'NOT_CHECKED_IN') return matchesSearch && !p.checkedIn;
+    if (guestFilter === 'CHECKED_IN') return matchesSearch && p.checkedIn && p.approved !== false;
+    if (guestFilter === 'NOT_CHECKED_IN') return matchesSearch && !p.checkedIn && p.approved !== false;
+    if (guestFilter === 'AWAITING_APPROVAL') return matchesSearch && p.approved === false;
     return matchesSearch;
   });
 
@@ -969,13 +972,19 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
                       onClick={() => setGuestFilter('CHECKED_IN')}
                       className={`px-2 py-1 uppercase font-bold cursor-pointer ${guestFilter === 'CHECKED_IN' ? 'bg-black text-[#00FF00]' : 'text-slate-700'}`}
                     >
-                      In ({participants.filter(p => p.checkedIn).length})
+                      In ({participants.filter(p => p.checkedIn && p.approved !== false).length})
                     </button>
                     <button
                       onClick={() => setGuestFilter('NOT_CHECKED_IN')}
                       className={`px-2 py-1 uppercase font-bold cursor-pointer ${guestFilter === 'NOT_CHECKED_IN' ? 'bg-black text-[#00FF00]' : 'text-slate-700'}`}
                     >
-                      Pending ({participants.filter(p => !p.checkedIn).length})
+                      Pending ({participants.filter(p => !p.checkedIn && p.approved !== false).length})
+                    </button>
+                    <button
+                      onClick={() => setGuestFilter('AWAITING_APPROVAL')}
+                      className={`px-2 py-1 uppercase font-bold cursor-pointer ${guestFilter === 'AWAITING_APPROVAL' ? 'bg-black text-amber-400' : 'text-slate-700'}`}
+                    >
+                      Awaiting Appr ({participants.filter(p => p.approved === false).length})
                     </button>
                   </div>
                 </div>
@@ -1012,7 +1021,12 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
                           <div className="text-slate-500">🥗 Diet: <strong>{guest.dietaryPreference || 'NONE'}</strong></div>
                         </td>
                         <td className="py-3 px-3">
-                          {guest.checkedIn ? (
+                          {guest.approved === false ? (
+                            <span className="text-amber-600 font-bold flex items-center gap-1 text-[11px] animate-pulse">
+                              <AlertCircle className="w-3.5 h-3.5" />
+                              <span>Awaiting Approval</span>
+                            </span>
+                          ) : guest.checkedIn ? (
                             <span className="text-emerald-600 font-bold flex items-center gap-1 text-[11px]">
                               <Check className="w-3.5 h-3.5 bg-emerald-100 rounded-full p-0.5" />
                               <span>Checked In</span>
@@ -1022,7 +1036,14 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
                           )}
                         </td>
                         <td className="py-3 px-3 text-right">
-                          {guest.checkedIn ? (
+                          {guest.approved === false ? (
+                            <button
+                              onClick={() => onToggleApprove && onToggleApprove(guest.id, true)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 text-[10px] rounded cursor-pointer transition-colors"
+                            >
+                              Approve
+                            </button>
+                          ) : guest.checkedIn ? (
                             <button
                               onClick={() => setBadgeParticipant(guest)}
                               className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-2 py-1 rounded border border-indigo-100 font-semibold cursor-pointer flex items-center gap-1 ml-auto"

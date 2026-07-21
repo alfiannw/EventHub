@@ -1,40 +1,53 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-serif: "Georgia", serif;
   
-  --color-canvas: #E4E3E0;
+  --color-canvas: #F9F7F2;
   --color-ink: #141414;
   --color-line: #141414;
-  --color-sidebar: #DFDEDA;
-  --color-header: #D8D7D4;
-  --color-card: #CFCECA;
-  --color-highlight: #00FF00;
+  --color-sidebar: #F1EFEA;
+  --color-header: #EBE8E0;
+  --color-card: #FFFFFF;
+  --color-highlight: #C5F237;
+  
+  --color-neo-lime: #C5F237;
+  --color-neo-yellow: #FFE600;
+  --color-neo-orange: #FF6B00;
+  --color-neo-blue: #38BDF8;
+  --color-neo-pink: #F472B6;
+  --color-neo-purple: #C084FC;
 }
 
 @layer base {
   body {
-    background-color: #E4E3E0;
+    background-color: #F9F7F2;
     color: #141414;
-    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-sans);
+    background-image: radial-gradient(#141414 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-opacity: 0.05;
   }
 }
 
-/* Custom Swiss Grid buttons, inputs, and card styles to perfectly implement the design requested */
+/* Custom Swiss & Neo-brutalist components */
+
 .btn-action-custom {
-  border: 1.5px solid #141414;
-  background-color: transparent;
+  border: 2px solid #141414;
+  background-color: #FFFFFF;
   color: #141414;
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   font-size: 11px;
   text-transform: uppercase;
-  font-weight: 700;
-  padding: 8px 12px;
-  transition: all 0.1s ease-in-out;
-  border-radius: 0px !important;
+  font-weight: 800;
+  padding: 8px 14px;
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border-radius: 12px !important;
+  box-shadow: 3px 3px 0px 0px #141414;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -43,55 +56,76 @@
 }
 
 .btn-action-custom:hover {
-  background-color: #141414;
-  color: #E4E3E0;
+  background-color: #F4F2EA;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px #141414;
+}
+
+.btn-action-custom:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px 0px #141414;
 }
 
 .btn-action-refresh {
-  border: 1px solid #141414;
-  background-color: transparent;
+  border: 2px solid #141414;
+  background-color: #FFE600; /* Neo Yellow for attention */
   color: #141414;
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   font-size: 8px;
   text-transform: uppercase;
-  font-weight: 700;
-  padding: 4px 6px;
-  transition: all 0.1s ease-in-out;
-  border-radius: 0px !important;
+  font-weight: 800;
+  padding: 4px 8px;
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border-radius: 8px !important;
+  box-shadow: 2px 2px 0px 0px #141414;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  height: 22px;
+  height: 24px;
 }
 
 .btn-action-refresh:hover {
-  background-color: #141414;
-  color: #E4E3E0;
+  background-color: #FFE600;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px 0px #141414;
+}
+
+.btn-action-refresh:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px 0px #141414;
 }
 
 @media (min-width: 768px) {
   .btn-action-refresh {
     font-size: 11px;
-    padding: 8px 12px;
+    padding: 8px 14px;
     gap: 6px;
-    height: 36px;
-    border-width: 1.5px;
+    height: 38px;
+    border-radius: 12px !important;
+    box-shadow: 3px 3px 0px 0px #141414;
+  }
+  .btn-action-refresh:hover {
+    box-shadow: 4px 4px 0px 0px #141414;
+  }
+  .btn-action-refresh:active {
+    box-shadow: 1px 1px 0px 0px #141414;
   }
 }
 
 .btn-action-primary {
-  border: 1.5px solid #141414;
-  background-color: #141414;
-  color: #E4E3E0;
+  border: 2px solid #141414;
+  background-color: #C5F237; /* Neo Lime */
+  color: #141414;
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   font-size: 11px;
   text-transform: uppercase;
-  font-weight: 700;
-  padding: 8px 12px;
-  transition: all 0.1s ease-in-out;
-  border-radius: 0px !important;
+  font-weight: 800;
+  padding: 8px 14px;
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border-radius: 12px !important;
+  box-shadow: 3.5px 3.5px 0px 0px #141414;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -100,70 +134,141 @@
 }
 
 .btn-action-primary:hover {
-  background-color: #E4E3E0;
-  color: #141414;
+  background-color: #D2FA4F;
+  transform: translate(-1.5px, -1.5px);
+  box-shadow: 5px 5px 0px 0px #141414;
+}
+
+.btn-action-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px 0px #141414;
 }
 
 .tech-card {
-  background-color: #ffffff;
-  border: 1.5px solid #141414;
-  border-radius: 0px !important;
-  box-shadow: 3px 3px 0px 0px #141414;
+  background-color: #FFFFFF;
+  border: 2.5px solid #141414;
+  border-radius: 16px !important;
+  box-shadow: 5px 5px 0px 0px #141414;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tech-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7.5px 7.5px 0px 0px #141414;
 }
 
 .tech-card-gray {
-  background-color: #DFDEDA;
-  border: 1.5px solid #141414;
-  border-radius: 0px !important;
-  box-shadow: 3px 3px 0px 0px #141414;
+  background-color: #F1EFEA;
+  border: 2.5px solid #141414;
+  border-radius: 16px !important;
+  box-shadow: 5px 5px 0px 0px #141414;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tech-card-gray:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7.5px 7.5px 0px 0px #141414;
 }
 
 .tech-card-dark {
   background-color: #141414;
-  color: #E4E3E0;
-  border: 1.5px solid #141414;
-  border-radius: 0px !important;
-  box-shadow: 3px 3px 0px 0px #141414;
+  color: #F9F7F2;
+  border: 2.5px solid #141414;
+  border-radius: 16px !important;
+  box-shadow: 5px 5px 0px 0px #C5F237; /* Vibrant highlight shadow! */
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tech-card-dark:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7.5px 7.5px 0px 0px #C5F237;
 }
 
 .tech-input {
-  border: 1.5px solid #141414;
-  background-color: #ffffff;
+  border: 2px solid #141414;
+  background-color: #FFFFFF;
   color: #141414;
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  border-radius: 0px !important;
-  padding: 8px 12px;
+  border-radius: 12px !important;
+  padding: 10px 14px;
   font-size: 12px;
   outline: none;
+  box-shadow: 2px 2px 0px 0px #141414;
+  transition: all 0.15s ease-in-out;
 }
 
 .tech-input:focus {
-  background-color: #F5F4F0;
-  box-shadow: inset 0px 0px 4px rgba(20, 20, 20, 0.1);
+  background-color: #FDFDFB;
+  box-shadow: 4px 4px 0px 0px #141414;
+  transform: translate(-1px, -1px);
 }
 
 .tech-select {
-  border: 1.5px solid #141414;
-  background-color: #ffffff;
+  border: 2px solid #141414;
+  background-color: #FFFFFF;
   color: #141414;
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  border-radius: 0px !important;
-  padding: 6px 12px;
+  border-radius: 12px !important;
+  padding: 8px 14px;
   font-size: 11px;
   outline: none;
+  box-shadow: 2px 2px 0px 0px #141414;
   cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.tech-select:focus {
+  box-shadow: 4px 4px 0px 0px #141414;
 }
 
 /* Custom Scrollbar for Monospace fields */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #E4E3E0;
-  border-left: 1px solid #141414;
+  background: #F1EFEA;
+  border-left: 2px solid #141414;
 }
 ::-webkit-scrollbar-thumb {
   background: #141414;
-  border: 1px solid #E4E3E0;
+  border: 2px solid #F1EFEA;
+}
+
+/* Neo Brutalist badging and details */
+.neo-badge-lime {
+  background-color: #C5F237;
+  color: #141414;
+  border: 2px solid #141414;
+  font-weight: 800;
+}
+.neo-badge-yellow {
+  background-color: #FFE600;
+  color: #141414;
+  border: 2px solid #141414;
+  font-weight: 800;
+}
+.neo-badge-blue {
+  background-color: #38BDF8;
+  color: #141414;
+  border: 2px solid #141414;
+  font-weight: 800;
+}
+.neo-badge-orange {
+  background-color: #FF6B00;
+  color: #FFFFFF;
+  border: 2px solid #141414;
+  font-weight: 800;
+}
+.neo-badge-pink {
+  background-color: #F472B6;
+  color: #141414;
+  border: 2px solid #141414;
+  font-weight: 800;
+}
+.neo-badge-purple {
+  background-color: #C084FC;
+  color: #141414;
+  border: 2px solid #141414;
+  font-weight: 800;
 }

@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   QrCode, Ticket, Sparkles, Send, Music, Image as ImageIcon, MessageSquare, 
   Award, CheckCircle2, AlertCircle, Camera, Check, Calendar, MapPin, ExternalLink,
-  Upload, Shield, Lock, User, Users, Briefcase, FileText, Utensils, Shirt, LogIn, UserPlus, LogOut, CheckSquare, Scan 
+  Upload, Shield, Lock, User, Users, Briefcase, FileText, Utensils, Shirt, LogIn, UserPlus, LogOut, CheckSquare, Scan, X 
 } from 'lucide-react';
 import { Participant, SongRequest, ActivitySubmission, EventConfig, BoothVisit, NetworkingConnection } from '../types';
+import jsQR from 'jsqr';
 
 interface RegistrationPortalProps {
   currentParticipant: Participant | undefined;
@@ -19,6 +20,9 @@ interface RegistrationPortalProps {
   onLoginParticipant: (loginData: { email: string; password?: string }) => Promise<Participant>;
   onUpdateProfile: (profileData: any) => Promise<void>;
   onSelectParticipant: (id: string) => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+  onLogout?: () => void;
 }
 
 const PRESET_AVATARS = [
@@ -34,6 +38,65 @@ const PRESET_EVENT_PHOTOS = [
   { name: "Main Stage Light Show Setup", url: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=600&auto=format&fit=crop&80" }
 ];
 
+// Reusable Drag and Drop Image Uploader
+const FileUploadArea = ({ label, value, onChange, placeholder, id }: { label: string, value: string, onChange: (val: string) => void, placeholder: string, id: string }) => {
+  const [dragging, setDragging] = useState(false);
+  return (
+    <div className="space-y-1.5 font-mono text-xs">
+      <span className="text-[10px] font-bold text-slate-700 uppercase block">{label}</span>
+      <label
+        htmlFor={id}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            const file = e.dataTransfer.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              if (typeof reader.result === 'string') onChange(reader.result);
+            };
+            reader.readAsDataURL(file);
+          }
+        }}
+        className={`border-2 border-dashed p-4 text-center cursor-pointer transition-all block relative ${
+          dragging ? 'border-indigo-600 bg-indigo-50/50' : 'border-[#141414] hover:bg-white/40'
+        }`}
+      >
+        <input
+          type="file"
+          id={id}
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files && e.target.files[0]) {
+              const file = e.target.files[0];
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                if (typeof reader.result === 'string') onChange(reader.result);
+              };
+              reader.readAsDataURL(file);
+            }
+          }}
+        />
+        {value ? (
+          <div className="flex flex-col items-center gap-2">
+            <img src={value} alt="Preview" className="h-16 w-16 object-cover border border-[#141414] mx-auto" />
+            <span className="text-[9px] font-bold text-emerald-700 uppercase">✓ Image Loaded (Click to Change)</span>
+          </div>
+        ) : (
+          <div className="space-y-1 py-1">
+            <Camera className="w-6 h-6 mx-auto text-slate-500" />
+            <p className="text-[10px] text-slate-700 font-bold">{placeholder}</p>
+            <p className="text-[8px] text-slate-400">Drag & drop image file or click</p>
+          </div>
+        )}
+      </label>
+    </div>
+  );
+};
+
 export default function RegistrationPortal({
   currentParticipant,
   eventConfig,
@@ -46,7 +109,10 @@ export default function RegistrationPortal({
   onRegisterParticipant,
   onLoginParticipant,
   onUpdateProfile,
-  onSelectParticipant
+  onSelectParticipant,
+  onRefresh,
+  isRefreshing,
+  onLogout
 }: RegistrationPortalProps) {
   
   // RSVP Form States (For non-registered or modifying profile)
@@ -84,6 +150,192 @@ export default function RegistrationPortal({
   const [boothScanSuccess, setBoothScanSuccess] = useState('');
   const [isScanningBooth, setIsScanningBooth] = useState(false);
   const [isSubmittingBoothScan, setIsSubmittingBoothScan] = useState(false);
+
+  // Real Camera scan states for Sponsor Booth
+  const [sponsorCameraActive, setSponsorCameraActive] = useState(false);
+  const [sponsorCameraDevices, setSponsorCameraDevices] = useState<MediaDeviceInfo[]>([]);
+  const [sponsorSelectedDeviceId, setSponsorSelectedDeviceId] = useState<string>('');
+  const [sponsorFacingMode, setSponsorFacingMode] = useState<'user' | 'environment'>('environment');
+  const [sponsorCameraError, setSponsorCameraError] = useState<string | null>(null);
+  const sponsorVideoRef = useRef<HTMLVideoElement | null>(null);
+  const sponsorCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastScannedSponsorCode = useRef<string>('');
+  const lastScannedSponsorTime = useRef<number>(0);
+  const [sponsorFileScanError, setSponsorFileScanError] = useState<string | null>(null);
+  const [sponsorFileScanSuccess, setSponsorFileScanSuccess] = useState(false);
+
+  // Sound Synthesizer (Web Audio API)
+  const playSponsorBeep = (success: boolean) => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      
+      if (success) {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        osc1.frequency.value = 523.25; // C5
+        osc2.frequency.value = 659.25; // E5
+        gainNode.gain.setValueAtTime(0, ctx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.04);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        osc1.start();
+        osc2.start();
+        osc1.stop(ctx.currentTime + 0.35);
+        osc2.stop(ctx.currentTime + 0.35);
+      } else {
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        osc.type = 'sawtooth';
+        osc.frequency.value = 130; // low G
+        gainNode.gain.setValueAtTime(0, ctx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.05);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+        
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        osc.start();
+        osc.stop(ctx.currentTime + 0.55);
+      }
+    } catch (e) {
+      console.error("Audio feedback failed:", e);
+    }
+  };
+
+  // Live Camera stream processing loop for Sponsor Booth
+  useEffect(() => {
+    let animationFrameId: number;
+    let stream: MediaStream | null = null;
+
+    const startSponsorCamera = async () => {
+      try {
+        setSponsorCameraError(null);
+        const constraints: MediaStreamConstraints = {
+          video: sponsorSelectedDeviceId 
+            ? { deviceId: { exact: sponsorSelectedDeviceId } }
+            : { facingMode: sponsorFacingMode }
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (sponsorVideoRef.current) {
+          sponsorVideoRef.current.srcObject = stream;
+          sponsorVideoRef.current.setAttribute("playsinline", "true");
+          sponsorVideoRef.current.play();
+        }
+        
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        setSponsorCameraDevices(videoDevices);
+      } catch (err: any) {
+        console.error("Sponsor camera access error:", err);
+        setSponsorCameraError(err.message || "Could not access camera. Please check camera permissions in browser.");
+      }
+    };
+
+    if (sponsorCameraActive) {
+      startSponsorCamera();
+    } else {
+      if (sponsorVideoRef.current && sponsorVideoRef.current.srcObject) {
+        const activeStream = sponsorVideoRef.current.srcObject as MediaStream;
+        activeStream.getTracks().forEach(track => track.stop());
+        sponsorVideoRef.current.srcObject = null;
+      }
+    }
+
+    const tickSponsor = () => {
+      if (sponsorVideoRef.current && sponsorVideoRef.current.readyState === sponsorVideoRef.current.HAVE_ENOUGH_DATA && sponsorCanvasRef.current) {
+        const canvas = sponsorCanvasRef.current;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (ctx) {
+          canvas.height = sponsorVideoRef.current.videoHeight;
+          canvas.width = sponsorVideoRef.current.videoWidth;
+          ctx.drawImage(sponsorVideoRef.current, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "attemptBoth",
+          });
+
+          if (code && code.data) {
+            handleDecodedSponsorQR(code.data);
+          }
+        }
+      }
+      if (sponsorCameraActive) {
+        animationFrameId = requestAnimationFrame(tickSponsor);
+      }
+    };
+
+    if (sponsorCameraActive) {
+      animationFrameId = requestAnimationFrame(tickSponsor);
+    }
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [sponsorCameraActive, sponsorFacingMode, sponsorSelectedDeviceId]);
+
+  const handleDecodedSponsorQR = (qrText: string) => {
+    if (lastScannedSponsorCode.current === qrText && Date.now() - lastScannedSponsorTime.current < 2500) {
+      return;
+    }
+    lastScannedSponsorCode.current = qrText;
+    lastScannedSponsorTime.current = Date.now();
+
+    playSponsorBeep(true);
+    setBoothScanCode(qrText);
+    handleSponsorBoothScan(qrText);
+    setSponsorCameraActive(false);
+  };
+
+  // Drag & Drop or Upload a Sponsor QR/Barcode image in Participant Portal
+  const handleSponsorQRImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setSponsorFileScanError(null);
+    setSponsorFileScanSuccess(false);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
+          if (code && code.data) {
+            setSponsorFileScanSuccess(true);
+            playSponsorBeep(true);
+            setBoothScanCode(code.data);
+            handleSponsorBoothScan(code.data);
+          } else {
+            playSponsorBeep(false);
+            setSponsorFileScanError("❌ Decode Failed: Could not find a clear QR or Barcode in this image.");
+          }
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  useEffect(() => {
+    setSponsorCameraActive(false);
+  }, [activeTab]);
 
   // Networking Challenge States
   const [connections, setConnections] = useState<NetworkingConnection[]>([]);
@@ -245,6 +497,15 @@ export default function RegistrationPortal({
       .catch(err => console.error("Error tracking open status:", err));
     }
   }, [currentParticipant]);
+
+  // If participant is not checked in, ensure activeTab resets to 'PASS' or 'PROFILE'
+  useEffect(() => {
+    if (currentParticipant && !currentParticipant.checkedIn) {
+      if (activeTab !== 'PASS' && activeTab !== 'PROFILE') {
+        setActiveTab('PASS');
+      }
+    }
+  }, [currentParticipant?.checkedIn, activeTab]);
 
   // Activity interaction states
   const [feedback, setFeedback] = useState('');
@@ -451,86 +712,16 @@ export default function RegistrationPortal({
     userDoorPrizeCategory = 'Silver Tier (Category B)';
   }
 
-  // Generate elegant mock QR SVG path
+  // Generate high-contrast, fully scannable real QR Code
   const renderMockQR = (text: string) => {
     return (
-      <svg className="w-40 h-40 mx-auto" viewBox="0 0 100 100" shapeRendering="crispEdges">
-        <rect width="100" height="100" fill="white" />
-        {/* Corners positioning blocks */}
-        <path d="M 5,5 h 25 v 25 h -25 z M 10,10 h 15 v 15 h -15 z" fill="#1e1b4b" />
-        <path d="M 65,5 h 25 v 25 h -25 z M 70,10 h 15 v 15 h -15 z" fill="#1e1b4b" />
-        <path d="M 5,65 h 25 v 25 h -25 z M 10,70 h 15 v 15 h -15 z" fill="#1e1b4b" />
-        {/* Fill random data blocks */}
-        <path d="M 35,10 h 10 v 10 h -10 z M 50,5 h 10 v 10 h -10 z M 35,25 h 15 v 5 h -15 z" fill="#312e81" />
-        <path d="M 10,35 h 10 v 15 h -10 z M 25,45 h 15 v 5 h -15 z M 5,55 h 20 v 5 h -20 z" fill="#4338ca" />
-        <path d="M 65,35 h 10 v 20 h -10 z M 80,45 h 15 v 10 h -15 z M 75,55 h 15 v 5 h -15 z" fill="#312e81" />
-        <path d="M 45,65 h 15 v 10 h -15 z M 35,80 h 10 v 15 h -10 z M 50,85 h 20 v 10 h -20 z" fill="#4338ca" />
-        <path d="M 75,70 h 15 v 5 h -15 z M 70,80 h 10 v 15 h -10 z M 85,85 h 10 v 10 h -10 z" fill="#1e1b4b" />
-        {/* QR Center logo */}
-        <rect x="42" y="42" width="16" height="16" rx="3" fill="#6366f1" />
-        <text x="50" y="52" fill="white" fontSize="9" fontWeight="bold" textAnchor="middle">EH</text>
-      </svg>
-    );
-  };
-
-  // Reusable Drag and Drop Image Uploader
-  const FileUploadArea = ({ label, value, onChange, placeholder, id }: { label: string, value: string, onChange: (val: string) => void, placeholder: string, id: string }) => {
-    const [dragging, setDragging] = useState(false);
-    return (
-      <div className="space-y-1.5 font-mono text-xs">
-        <label className="text-[10px] font-bold text-slate-700 uppercase block">{label}</label>
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragging(false);
-            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-              const file = e.dataTransfer.files[0];
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                if (typeof reader.result === 'string') onChange(reader.result);
-              };
-              reader.readAsDataURL(file);
-            }
-          }}
-          className={`border-2 border-dashed p-4 text-center cursor-pointer transition-all relative ${
-            dragging ? 'border-indigo-600 bg-indigo-50/50' : 'border-[#141414] hover:bg-white/40'
-          }`}
-          onClick={() => {
-            const input = document.getElementById(id);
-            if (input) input.click();
-          }}
-        >
-          <input
-            type="file"
-            id={id}
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  if (typeof reader.result === 'string') onChange(reader.result);
-                };
-                reader.readAsDataURL(file);
-              }
-            }}
-          />
-          {value ? (
-            <div className="flex flex-col items-center gap-2">
-              <img src={value} alt="Preview" className="h-16 w-16 object-cover border border-[#141414] mx-auto" />
-              <span className="text-[9px] font-bold text-emerald-700 uppercase">✓ Image Loaded (Click to Change)</span>
-            </div>
-          ) : (
-            <div className="space-y-1 py-1">
-              <Camera className="w-6 h-6 mx-auto text-slate-500" />
-              <p className="text-[10px] text-slate-700 font-bold">{placeholder}</p>
-              <p className="text-[8px] text-slate-400">Drag & drop image file or click</p>
-            </div>
-          )}
-        </div>
+      <div className="flex flex-col items-center justify-center p-2 bg-white border border-[#141414] mx-auto w-40 h-40">
+        <img
+          src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(text)}`}
+          alt={`QR Code for ${text}`}
+          className="w-36 h-36 block object-contain"
+          referrerPolicy="no-referrer"
+        />
       </div>
     );
   };
@@ -871,6 +1062,69 @@ export default function RegistrationPortal({
             </form>
           )}
         </div>
+      ) : currentParticipant?.approved === false ? (
+        /* Pending Approval Screen */
+        <div className="tech-card overflow-hidden max-w-xl mx-auto p-8 bg-white border-2 border-black rounded-2xl shadow-[6px_6px_0px_0px_rgba(20,20,20,1)] text-center space-y-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 border border-amber-400 text-amber-600 animate-pulse">
+            <Shield className="w-8 h-8" />
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-xl font-mono font-black uppercase text-slate-900 tracking-tight">
+              Awaiting Registration Approval
+            </h2>
+            <p className="text-xs text-slate-600 font-mono leading-relaxed">
+              Your account has been saved successfully! However, an <strong>Event Manager</strong> or <strong>Event Staff</strong> must review and approve your registration before you can access the Participant Hub, digital pass, and live activities.
+            </p>
+          </div>
+
+          <div className="bg-[#DFDEDA] border border-black p-4 rounded-xl font-mono text-left text-[11px] space-y-2.5">
+            <span className="text-[9px] font-bold text-indigo-700 uppercase block tracking-wider">[ Saved Registration Profile ]</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-800 font-bold">
+              <div>
+                <span className="text-slate-500 font-normal">NAME:</span> {currentParticipant.name}
+              </div>
+              <div>
+                <span className="text-slate-500 font-normal">EMAIL:</span> {currentParticipant.email}
+              </div>
+              <div>
+                <span className="text-slate-500 font-normal">COMPANY:</span> {currentParticipant.company || 'Independent'}
+              </div>
+              <div>
+                <span className="text-slate-500 font-normal">POSITION:</span> {currentParticipant.position || 'Professional'}
+              </div>
+            </div>
+            <div className="pt-2 border-t border-neutral-300 flex items-center justify-between text-slate-600 font-bold text-[10px]">
+              <span>STATUS:</span>
+              <span className="bg-amber-600 text-white px-2 py-0.5 rounded font-black uppercase tracking-wider text-[8px] animate-pulse">
+                PENDING STAFF REVIEW
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => onRefresh && onRefresh()}
+              disabled={isRefreshing}
+              className="flex-1 btn-action-primary py-2.5 px-4 text-xs font-bold font-mono uppercase flex items-center justify-center gap-2 cursor-pointer bg-[#C5F237] text-[#141414] border-2 border-[#141414] rounded-lg shadow-[2px_2px_0px_0px_#141414]"
+            >
+              <Sparkles className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>{isRefreshing ? 'Checking...' : 'Check Approval Status'}</span>
+            </button>
+            
+            <button
+              onClick={() => onLogout && onLogout()}
+              className="flex-1 py-2.5 px-4 text-xs font-bold font-mono uppercase flex items-center justify-center gap-2 cursor-pointer bg-white text-slate-700 hover:text-black border-2 border-slate-300 hover:border-black rounded-lg transition-all"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Logout / Change Account</span>
+            </button>
+          </div>
+          
+          <p className="text-[9px] font-mono text-slate-400">
+            System last checked at: {new Date().toLocaleTimeString()}
+          </p>
+        </div>
       ) : (
         /* Participant Hub Dashboard */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -951,11 +1205,19 @@ export default function RegistrationPortal({
                 <div className="grid grid-cols-2 gap-3.5 bg-[#DFDEDA] p-3 rounded-none border-[1.5px] border-[#141414] text-xs font-mono">
                   <div>
                     <span className="text-slate-500 uppercase block text-[9px] tracking-wider font-bold">Table Allocation</span>
-                    <span className="text-black font-extrabold">{currentParticipant.tableNumber}</span>
+                    {currentParticipant.checkedIn ? (
+                      <span className="text-black font-extrabold">{currentParticipant.tableNumber}</span>
+                    ) : (
+                      <span className="text-slate-500 font-bold italic flex items-center gap-1">🔒 Locked</span>
+                    )}
                   </div>
                   <div>
                     <span className="text-slate-500 uppercase block text-[9px] tracking-wider font-bold">Seat Number</span>
-                    <span className="text-black font-extrabold">{currentParticipant.seatNumber}</span>
+                    {currentParticipant.checkedIn ? (
+                      <span className="text-black font-extrabold">{currentParticipant.seatNumber}</span>
+                    ) : (
+                      <span className="text-slate-500 font-bold italic flex items-center gap-1">🔒 Locked</span>
+                    )}
                   </div>
                   <div>
                     <span className="text-slate-500 uppercase block text-[9px] tracking-wider font-bold">Participant ID</span>
@@ -1041,70 +1303,92 @@ export default function RegistrationPortal({
           <div className="lg:col-span-8 space-y-6">
             
              {/* Participant Action Tabs Navigation */}
-            <div className="flex flex-wrap border-[1.5px] border-[#141414] bg-[#DFDEDA] p-1 rounded-none gap-1 font-mono">
+            <div className="flex flex-wrap bg-white p-2 border-2.5 border-[#141414] rounded-2xl gap-2 shadow-[4px_4px_0px_0px_#141414] font-mono mb-6">
               <button
                 onClick={() => setActiveTab('PASS')}
-                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  activeTab === 'PASS' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
+                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-black rounded-[10px] border-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeTab === 'PASS' 
+                    ? 'bg-[#C5F237] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                    : 'bg-transparent text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-[1px_1px_0px_rgba(0,0,0,0.05)]'
                 }`}
               >
-                <Ticket className="w-3.5 h-3.5" />
+                <Ticket className="w-3.5 h-3.5 text-amber-700" />
                 <span>My Dashboard</span>
               </button>
-              <button
-                onClick={() => setActiveTab('ACTIVITIES')}
-                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  activeTab === 'ACTIVITIES' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
-                }`}
-              >
-                <Award className="w-3.5 h-3.5" />
-                <span>Earn Points ({currentParticipant.points} PTS)</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('SPONSORS')}
-                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  activeTab === 'SPONSORS' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
-                <span>Sponsor Booths</span>
-              </button>
-              {eventConfig?.activities?.find(a => a.type === 'NETWORKING')?.isEnabled !== false && (
-                <button
-                  onClick={() => setActiveTab('NETWORKING')}
-                  className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                    activeTab === 'NETWORKING' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5 text-blue-500" />
-                  <span>Networking</span>
-                </button>
+              
+              {currentParticipant.checkedIn && (
+                <>
+                  <button
+                    onClick={() => setActiveTab('ACTIVITIES')}
+                    className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-black rounded-[10px] border-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      activeTab === 'ACTIVITIES' 
+                        ? 'bg-[#38BDF8] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                        : 'bg-transparent text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-[1px_1px_0px_rgba(0,0,0,0.05)]'
+                    }`}
+                  >
+                    <Award className="w-3.5 h-3.5 text-blue-700" />
+                    <span>Earn Points ({currentParticipant.points} PTS)</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('SPONSORS')}
+                    className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-black rounded-[10px] border-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      activeTab === 'SPONSORS' 
+                        ? 'bg-[#FFE600] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                        : 'bg-transparent text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-[1px_1px_0px_rgba(0,0,0,0.05)]'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Sponsor Booths</span>
+                  </button>
+                  {eventConfig?.activities?.find(a => a.type === 'NETWORKING')?.isEnabled !== false && (
+                    <button
+                      onClick={() => setActiveTab('NETWORKING')}
+                      className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-black rounded-[10px] border-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        activeTab === 'NETWORKING' 
+                          ? 'bg-[#FF6B00] text-white border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                          : 'bg-transparent text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-[1px_1px_0px_rgba(0,0,0,0.05)]'
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Networking</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setActiveTab('SONGS')}
+                    className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-black rounded-[10px] border-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      activeTab === 'SONGS' 
+                        ? 'bg-[#DDD6FE] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                        : 'bg-transparent text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-[1px_1px_0px_rgba(0,0,0,0.05)]'
+                    }`}
+                  >
+                    <Music className="w-3.5 h-3.5 text-purple-700" />
+                    <span>Song Requests</span>
+                  </button>
+                  {eventConfig?.showLeaderboardRank !== false && (
+                    <button
+                      onClick={() => setActiveTab('LEADERBOARD')}
+                      className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-black rounded-[10px] border-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        activeTab === 'LEADERBOARD' 
+                          ? 'bg-[#F472B6] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                          : 'bg-transparent text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-[1px_1px_0px_rgba(0,0,0,0.05)]'
+                      }`}
+                    >
+                      <QrCode className="w-3.5 h-3.5 text-pink-700" />
+                      <span>Leaderboard</span>
+                    </button>
+                  )}
+                </>
               )}
-              <button
-                onClick={() => setActiveTab('SONGS')}
-                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  activeTab === 'SONGS' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
-                }`}
-              >
-                <Music className="w-3.5 h-3.5" />
-                <span>Song Requests</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('LEADERBOARD')}
-                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  activeTab === 'LEADERBOARD' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
-                }`}
-              >
-                <QrCode className="w-3.5 h-3.5" />
-                <span>Leaderboard</span>
-              </button>
+
               <button
                 onClick={() => setActiveTab('PROFILE')}
-                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-bold rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  activeTab === 'PROFILE' ? 'bg-[#141414] text-white' : 'text-slate-700 hover:text-black hover:bg-white/50'
+                className={`flex-1 min-w-[110px] py-2 px-3 text-xs font-black rounded-[10px] border-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeTab === 'PROFILE' 
+                    ? 'bg-[#C084FC] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                    : 'bg-transparent text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-[1px_1px_0px_rgba(0,0,0,0.05)]'
                 }`}
               >
-                <User className="w-3.5 h-3.5" />
+                <User className="w-3.5 h-3.5 text-fuchsia-700" />
                 <span>Complete Profile</span>
               </button>
             </div>
@@ -1125,15 +1409,27 @@ export default function RegistrationPortal({
                     </div>
                   </div>
  
-                  <div className="tech-card p-4 flex items-center gap-3 font-mono">
-                    <div className="h-10 w-10 rounded-none bg-[#00FF00]/20 border border-[#141414] flex items-center justify-center text-black shrink-0">
-                      <Sparkles className="w-5 h-5 stroke-[2]" />
+                  {eventConfig?.showLeaderboardRank !== false ? (
+                    <div className="tech-card p-4 flex items-center gap-3 font-mono">
+                      <div className="h-10 w-10 rounded-none bg-[#00FF00]/20 border border-[#141414] flex items-center justify-center text-black shrink-0">
+                        <Sparkles className="w-5 h-5 stroke-[2]" />
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider block">Leaderboard Rank</span>
+                        <span className="text-sm font-bold text-slate-900">Rank #{userRank}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider block">Leaderboard Rank</span>
-                      <span className="text-sm font-bold text-slate-900">Rank #{userRank}</span>
+                  ) : (
+                    <div className="tech-card p-4 flex items-center gap-3 font-mono opacity-80">
+                      <div className="h-10 w-10 rounded-none bg-slate-100 border border-[#141414] flex items-center justify-center text-slate-400 shrink-0">
+                        <Lock className="w-5 h-5 stroke-[2]" />
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider block">Leaderboard Rank</span>
+                        <span className="text-sm font-bold text-slate-400">Rankings Private</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
  
                   <div className="tech-card p-4 flex items-center gap-3 font-mono">
                     <div className="h-10 w-10 rounded-none bg-slate-100 border border-[#141414] flex items-center justify-center text-slate-700 shrink-0">
@@ -1198,36 +1494,46 @@ export default function RegistrationPortal({
                 </div>
  
                 {/* Activity Progress */}
-                <div className="tech-card p-5 font-mono">
-                  <h3 className="font-bold text-slate-900 text-sm tracking-tight uppercase mb-3 border-b border-[#141414] pb-2">Earned Point Milestones</h3>
-                  <div className="space-y-4 text-xs">
-                    <div>
-                      <div className="flex justify-between items-center mb-1 text-slate-700">
-                        <span className="font-bold">Silver Category Milestone (11 points)</span>
-                        <span className="font-mono font-bold">{currentParticipant.points}/11 PTS</span>
+                {currentParticipant.checkedIn ? (
+                  <div className="tech-card p-5 font-mono">
+                    <h3 className="font-bold text-slate-900 text-sm tracking-tight uppercase mb-3 border-b border-[#141414] pb-2">Earned Point Milestones</h3>
+                    <div className="space-y-4 text-xs">
+                      <div>
+                        <div className="flex justify-between items-center mb-1 text-slate-700">
+                          <span className="font-bold">Silver Category Milestone (11 points)</span>
+                          <span className="font-mono font-bold">{currentParticipant.points}/11 PTS</span>
+                        </div>
+                        <div className="w-full bg-[#DFDEDA] h-3 border border-[#141414] rounded-none overflow-hidden">
+                          <div 
+                            className="bg-black h-full transition-all" 
+                            style={{ width: `${Math.min((currentParticipant.points / 11) * 100, 100)}%` }}
+                          ></div>
+                        </div>
                       </div>
-                      <div className="w-full bg-[#DFDEDA] h-3 border border-[#141414] rounded-none overflow-hidden">
-                        <div 
-                          className="bg-black h-full transition-all" 
-                          style={{ width: `${Math.min((currentParticipant.points / 11) * 100, 100)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex justify-between items-center mb-1 text-slate-700">
-                        <span className="font-bold">Gold Category Milestone (21 points)</span>
-                        <span className="font-mono font-bold">{currentParticipant.points}/21 PTS</span>
-                      </div>
-                      <div className="w-full bg-[#DFDEDA] h-3 border border-[#141414] rounded-none overflow-hidden">
-                        <div 
-                          className="bg-[#00FF00] h-full border-r border-black transition-all" 
-                          style={{ width: `${Math.min((currentParticipant.points / 21) * 100, 100)}%` }}
-                        ></div>
+                      
+                      <div>
+                        <div className="flex justify-between items-center mb-1 text-slate-700">
+                          <span className="font-bold">Gold Category Milestone (21 points)</span>
+                          <span className="font-mono font-bold">{currentParticipant.points}/21 PTS</span>
+                        </div>
+                        <div className="w-full bg-[#DFDEDA] h-3 border border-[#141414] rounded-none overflow-hidden">
+                          <div 
+                            className="bg-[#00FF00] h-full border-r border-black transition-all" 
+                            style={{ width: `${Math.min((currentParticipant.points / 21) * 100, 100)}%` }}
+                          ></div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="tech-card p-5 font-mono bg-slate-50 border-dashed border-slate-300 flex flex-col items-center justify-center text-center py-8">
+                    <Lock className="w-8 h-8 text-slate-400 mb-2" />
+                    <h4 className="font-bold text-slate-700 uppercase text-xs">Milestones & Earning Locked</h4>
+                    <p className="text-[11px] text-slate-500 max-w-sm mt-1">
+                      Check-in at the front desk of the event to unlock point earning, table assignments, and milestones!
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1313,48 +1619,50 @@ export default function RegistrationPortal({
                                 ))}
                               </div>
                             </div>
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-4">
                               <div>
-                                <label className="text-[9px] font-bold text-slate-500 uppercase block mb-2">Upload or Take Photo</label>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  capture="environment"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      const reader = new FileReader();
-                                      reader.onload = (evt) => {
-                                        setCustomPhotoUrl(evt.target?.result as string);
-                                        setSelectedPhotoPreset(null);
-                                      };
-                                      reader.readAsDataURL(file);
-                                    }
-                                  }}
-                                  className="text-xs w-full mb-2 border border-slate-300 p-1 bg-slate-50"
+                                <FileUploadArea 
+                                  label="Upload or Take Photo Proof" 
+                                  value={customPhotoUrl} 
+                                  onChange={(val) => { setCustomPhotoUrl(val); setSelectedPhotoPreset(''); }} 
+                                  placeholder="Snap Camera or Upload from Gallery" 
+                                  id="activity-photo-proof"
                                 />
-                                {customPhotoUrl && customPhotoUrl.startsWith('data:image') && (
-                                  <div className="h-32 mb-2 bg-slate-100 border border-slate-300 flex items-center justify-center overflow-hidden">
-                                    <img src={customPhotoUrl} alt="Preview" className="max-h-full max-w-full object-contain" />
+                              </div>
+
+                              {/* Photo Preview Section before submission */}
+                              {(selectedPhotoPreset || customPhotoUrl) && (
+                                <div className="space-y-2 p-3 bg-slate-50 border-2 border-dashed border-[#141414] rounded-xl">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black text-[#141414] uppercase tracking-wider font-mono flex items-center gap-1.5">
+                                      📸 Photo Preview (Ready to Submit)
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => { setSelectedPhotoPreset(''); setCustomPhotoUrl(''); }}
+                                      className="text-[10px] font-black uppercase text-red-600 hover:text-red-800 flex items-center gap-1 cursor-pointer font-mono"
+                                    >
+                                      <X className="w-3.5 h-3.5" /> Remove
+                                    </button>
                                   </div>
-                                )}
-                              </div>
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  placeholder="Or input custom Photo image URL directly..."
-                                  value={customPhotoUrl}
-                                  onChange={(e) => { setCustomPhotoUrl(e.target.value); setSelectedPhotoPreset(null); }}
-                                  className="tech-input flex-1 text-xs"
-                                />
-                                <button
-                                  onClick={() => handlePhotoUploadSubmit(selectedPhotoPreset || customPhotoUrl)}
-                                  disabled={!selectedPhotoPreset && !customPhotoUrl}
-                                  className="btn-action-primary text-xs py-1.5 px-4 disabled:opacity-50 shrink-0"
-                                >
-                                  Submit Photo Proof
-                                </button>
-                              </div>
+                                  <div className="border-2 border-[#141414] bg-white p-1 rounded-lg overflow-hidden shadow-[2px_2px_0px_0px_#141414] max-h-64 flex items-center justify-center">
+                                    <img 
+                                      src={selectedPhotoPreset || customPhotoUrl} 
+                                      alt="Selected Preview" 
+                                      className="max-h-60 w-full object-contain rounded" 
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              <button
+                                onClick={() => handlePhotoUploadSubmit(selectedPhotoPreset || customPhotoUrl)}
+                                disabled={!selectedPhotoPreset && !customPhotoUrl}
+                                className="btn-action-primary w-full py-2.5 px-4 text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                              >
+                                <Upload className="w-4 h-4" />
+                                <span>Submit Photo Proof</span>
+                              </button>
                             </div>
                             {photoUploaded && (
                               <div className="text-xs text-[#141414] font-bold bg-[#DFDEDA] border border-[#141414] p-2.5 rounded-none flex items-center gap-1.5 mt-2">
@@ -1667,69 +1975,81 @@ export default function RegistrationPortal({
             {/* TAB CONTENT: Leaderboard */}
             {activeTab === 'LEADERBOARD' && (
               <div className="tech-card p-5 font-mono text-xs">
-                <div className="border-b border-[#141414] pb-3 flex justify-between items-center">
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm uppercase">Active Leaderboard</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Real-time point distribution of checked-in participants.</p>
+                {eventConfig?.showLeaderboardRank === false ? (
+                  <div className="text-center py-12 space-y-3">
+                    <Lock className="w-10 h-10 text-slate-400 mx-auto" />
+                    <h3 className="font-bold text-slate-900 text-sm uppercase">Leaderboard is Private</h3>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto">
+                      The event administrator has disabled public leaderboard ranking visibility for this event. Points can still be earned through activities.
+                    </p>
                   </div>
-                  <span className="text-xs bg-black text-[#00FF00] px-2 py-1 rounded-none font-bold">
-                    {leaderboard.filter(p => p.checkedIn).length} Checked-In
-                  </span>
-                </div>
+                ) : (
+                  <>
+                    <div className="border-b border-[#141414] pb-3 flex justify-between items-center">
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm uppercase">Active Leaderboard</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">Real-time point distribution of checked-in participants.</p>
+                      </div>
+                      <span className="text-xs bg-black text-[#00FF00] px-2 py-1 rounded-none font-bold">
+                        {leaderboard.filter(p => p.checkedIn).length} Checked-In
+                      </span>
+                    </div>
 
-                <div className="mt-4 space-y-2">
-                  {leaderboard
-                    .filter(p => p.checkedIn)
-                    .map((participant, index) => {
-                      const isCurrentUser = participant.id === currentParticipant?.id;
-                      const rank = index + 1;
-                      
-                      let trophyBg = 'bg-slate-100 text-slate-800';
-                      if (rank === 1) trophyBg = 'bg-[#00FF00] text-black border-[#141414] font-extrabold';
-                      else if (rank === 2) trophyBg = 'bg-white text-slate-800 border-slate-400 font-extrabold';
-                      else if (rank === 3) trophyBg = 'bg-[#DFDEDA] text-slate-800 border-slate-300 font-extrabold';
-
-                      return (
-                        <div
-                          key={participant.id}
-                          className={`p-3 rounded-none border-[1.5px] flex justify-between items-center text-xs transition-colors ${
-                            isCurrentUser 
-                              ? 'bg-[#00FF00]/10 border-black font-bold' 
-                              : 'bg-white border-[#141414]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className={`h-6 w-6 rounded-none flex items-center justify-center font-mono text-[11px] shrink-0 border border-black ${trophyBg}`}>
-                              {rank}
-                            </span>
-                            <img
-                              src={participant.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"}
-                              alt={participant.name}
-                              className="w-8 h-8 rounded-none border border-[#141414] object-cover shrink-0"
-                            />
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-slate-950 truncate">{participant.name}</span>
-                                {isCurrentUser && (
-                                  <span className="bg-black text-[#00FF00] text-[9px] font-bold px-1.5 py-0.5 rounded-none uppercase shrink-0">
-                                    You
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-[10px] text-slate-500 truncate uppercase">{participant.company || 'Professional'}</p>
-                            </div>
-                          </div>
+                    <div className="mt-4 space-y-2">
+                      {leaderboard
+                        .filter(p => p.checkedIn)
+                        .map((participant, index) => {
+                          const isCurrentUser = participant.id === currentParticipant?.id;
+                          const rank = index + 1;
                           
-                          <div className="text-right shrink-0">
-                            <span className="font-extrabold text-slate-900 text-sm font-mono block">{participant.points} PTS</span>
-                            <span className="text-[10px] uppercase text-slate-400">
-                              {participant.points >= 21 ? 'Gold Tier' : participant.points >= 11 ? 'Silver Tier' : 'Bronze Tier'}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
+                          let trophyBg = 'bg-slate-100 text-slate-800';
+                          if (rank === 1) trophyBg = 'bg-[#00FF00] text-black border-[#141414] font-extrabold';
+                          else if (rank === 2) trophyBg = 'bg-white text-slate-800 border-slate-400 font-extrabold';
+                          else if (rank === 3) trophyBg = 'bg-[#DFDEDA] text-slate-800 border-slate-300 font-extrabold';
+
+                          return (
+                            <div
+                              key={participant.id}
+                              className={`p-3 rounded-none border-[1.5px] flex justify-between items-center text-xs transition-colors ${
+                                isCurrentUser 
+                                  ? 'bg-[#00FF00]/10 border-black font-bold' 
+                                  : 'bg-white border-[#141414]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className={`h-6 w-6 rounded-none flex items-center justify-center font-mono text-[11px] shrink-0 border border-black ${trophyBg}`}>
+                                  {rank}
+                                </span>
+                                <img
+                                  src={participant.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"}
+                                  alt={participant.name}
+                                  className="w-8 h-8 rounded-none border border-[#141414] object-cover shrink-0"
+                                />
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-bold text-slate-950 truncate">{participant.name}</span>
+                                    {isCurrentUser && (
+                                      <span className="bg-black text-[#00FF00] text-[9px] font-bold px-1.5 py-0.5 rounded-none uppercase shrink-0">
+                                        You
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-slate-500 truncate uppercase">{participant.company || 'Professional'}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="text-right shrink-0">
+                                <span className="font-extrabold text-slate-900 text-sm font-mono block">{participant.points} PTS</span>
+                                <span className="text-[10px] uppercase text-slate-400">
+                                  {participant.points >= 21 ? 'Gold Tier' : participant.points >= 11 ? 'Silver Tier' : 'Bronze Tier'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -2033,42 +2353,134 @@ export default function RegistrationPortal({
                     </div>
                   </div>
                 </div>
-
-                {/* Main QR Simulation / Manual Scan Form Card */}
+                   {/* Main QR Simulation / Manual Scan Form Card */}
                 <div className="tech-card p-6 font-mono space-y-4">
                   <h4 className="font-bold text-[#141414] uppercase text-[10px] tracking-widest border-b border-slate-200 pb-1 flex items-center gap-1.5">
                     <Scan className="w-4 h-4 text-indigo-600" />
                     <span>[ Sponsor QR Code Verification Portal ]</span>
                   </h4>
 
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
                     
-                    {/* Left side: Animated simulated QR camera view */}
+                    {/* Left side: Live Camera View or Upload area */}
                     <div className="md:col-span-5 bg-black border-[1.5px] border-[#141414] aspect-square relative flex flex-col items-center justify-center p-4 overflow-hidden">
                       <div className="absolute inset-0 bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:16px_16px] opacity-40" />
                       
-                      {/* Scan Lines and Overlay */}
-                      <div className="absolute w-full h-0.5 bg-green-500/80 top-1/2 left-0 shadow-[0_0_8px_rgba(34,197,94,0.8)] z-10" />
-                      <div className="w-36 h-36 border-2 border-dashed border-green-500 relative flex items-center justify-center">
-                        <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-green-400" />
-                        <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-green-400" />
-                        <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-green-400" />
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-green-400" />
-                        
-                        <QrCode className="w-16 h-16 text-slate-800 animate-pulse" />
-                      </div>
+                      {sponsorCameraActive ? (
+                        <div className="absolute inset-0 flex flex-col justify-between p-2 z-10 bg-black">
+                          <div className="relative w-full flex-1 bg-neutral-900 border border-slate-700 overflow-hidden flex items-center justify-center">
+                            <video 
+                              ref={sponsorVideoRef} 
+                              className="w-full h-full object-cover"
+                            />
+                            <canvas ref={sponsorCanvasRef} className="hidden" />
+                            <div className="absolute inset-0 border-2 border-emerald-500/30 pointer-events-none"></div>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-dashed border-emerald-400/60 pointer-events-none"></div>
+                            {/* Scanning laser line */}
+                            <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-bounce"></div>
+                          </div>
 
-                      <div className="mt-4 text-[9px] text-green-400 uppercase tracking-widest font-mono z-10 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
-                        <span>Simulated Lens Active</span>
-                      </div>
+                          <div className="flex gap-1.5 mt-2">
+                            {sponsorCameraDevices.length > 1 && (
+                              <select
+                                value={sponsorSelectedDeviceId}
+                                onChange={(e) => setSponsorSelectedDeviceId(e.target.value)}
+                                className="bg-slate-900 text-white border border-slate-700 text-[9px] p-1 flex-1 font-mono focus:outline-none"
+                              >
+                                <option value="">Select Lens...</option>
+                                {sponsorCameraDevices.map((device, i) => (
+                                  <option key={device.deviceId} value={device.deviceId}>
+                                    {device.label || `Camera ${i + 1}`}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setSponsorFacingMode(prev => prev === 'user' ? 'environment' : 'user')}
+                              className="bg-slate-800 text-slate-200 border border-slate-600 text-[8px] px-2 py-1 uppercase font-bold cursor-pointer hover:bg-slate-700"
+                            >
+                              Flip
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSponsorCameraActive(false)}
+                              className="bg-rose-950 text-rose-200 border border-rose-800 text-[8px] px-2 py-1 uppercase font-bold cursor-pointer hover:bg-rose-900"
+                            >
+                              Stop
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-center p-2 z-10 space-y-3">
+                          {/* Simulated default lens view when camera is inactive */}
+                          <div className="w-24 h-24 border-2 border-dashed border-slate-500 relative flex items-center justify-center">
+                            <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-slate-400" />
+                            <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-slate-400" />
+                            <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-slate-400" />
+                            <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-slate-400" />
+                            <QrCode className="w-10 h-10 text-slate-600" />
+                          </div>
+
+                          <div className="space-y-1.5 w-full">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSponsorCameraActive(true);
+                                setSponsorFileScanError(null);
+                                setSponsorFileScanSuccess(false);
+                              }}
+                              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 text-[10px] border border-black uppercase cursor-pointer flex items-center justify-center gap-1"
+                            >
+                              <Camera className="w-3.5 h-3.5" />
+                              <span>Start Live Webcam</span>
+                            </button>
+
+                            <div className="text-slate-500 text-[8px] uppercase font-bold">OR UPLOAD IMAGE</div>
+
+                            <label className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-1.5 px-3 text-[10px] border border-slate-600 uppercase cursor-pointer flex items-center justify-center gap-1">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>Upload QR Pass</span>
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                onChange={handleSponsorQRImageUpload} 
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Right side: Manual input / interactive selection */}
                     <div className="md:col-span-7 space-y-4">
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        To claim points, point your cellphone camera at the sponsor's custom-printed QR code on their counter, or select a nearby booth below to simulate a live physical scan.
+                        To claim points, click <strong className="text-indigo-600">Start Live Webcam</strong> above to scan the sponsor's QR code using your laptop/phone camera, upload a saved QR image, or manually type their sponsor code.
                       </p>
+
+                      {/* File Scan Error or Success */}
+                      {sponsorFileScanError && (
+                        <div className="p-3 bg-red-100 border-[1.5px] border-red-900 text-red-900 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-red-700 shrink-0" />
+                          <span>{sponsorFileScanError}</span>
+                        </div>
+                      )}
+
+                      {sponsorFileScanSuccess && (
+                        <div className="p-3 bg-emerald-100 border-[1.5px] border-emerald-900 text-emerald-950 text-xs flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                          <span>✓ QR Code decoded from image successfully!</span>
+                        </div>
+                      )}
+
+                      {/* Sponsor Camera Access Error */}
+                      {sponsorCameraError && (
+                        <div className="p-3 bg-amber-100 border-[1.5px] border-amber-900 text-amber-900 text-xs flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                          <span>{sponsorCameraError}</span>
+                        </div>
+                      )}
 
                       {/* Scan Feedback */}
                       {boothScanError && (

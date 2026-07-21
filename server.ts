@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
-import { Participant, ActivitySubmission, SongRequest, DoorPrizeCategory, LuckyDrawCategory, LuckyDrawWinner, AuditLog, EventConfig, ActivityType, EventPlannerItem, BoothVisit, NetworkingConnection } from "./src/types";
+import { Participant, ActivitySubmission, SongRequest, DoorPrizeCategory, LuckyDrawCategory, LuckyDrawWinner, AuditLog, EventConfig, ActivityType, EventPlannerItem, BoothVisit, NetworkingConnection, AppUser } from "./src/types";
 
 const PORT = 3000;
 const DATA_FILE = path.join(process.cwd(), "db-store.json");
@@ -14,6 +14,7 @@ const DEFAULT_EVENT_CONFIG: EventConfig = {
   date: "2026-07-15",
   time: "09:00 AM - 05:00 PM",
   googleMapsUrl: "https://maps.google.com/?q=Grand+Ballroom,+Tech+Plaza+Hotel,+San+Francisco",
+  showLeaderboardRank: true,
   schedule: [
     { time: "08:30 AM - 09:30 AM", activity: "Guest Arrival & QR Check-In", description: "Collect badge and register attendance at the front desk" },
     { time: "09:30 AM - 11:00 AM", activity: "Opening Keynote & AI Tech Trends", description: "Opening session featuring key tech highlights in Grand Ballroom" },
@@ -351,6 +352,7 @@ const DEFAULT_EVENTS_LIST: EventPlannerItem[] = [
     isArchived: false,
     createdAt: "2026-01-10T08:00:00Z",
     description: "The premiere event for SaaS developers, designers, and managers globally.",
+    showLeaderboardRank: true,
     venueDetails: {
       ballroom: "Grand Ballroom, Section A & B",
       capacity: 500,
@@ -442,6 +444,7 @@ const DEFAULT_EVENTS_LIST: EventPlannerItem[] = [
     isArchived: true,
     createdAt: "2025-05-12T09:00:00Z",
     description: "The 2025 iteration of our landmark SaaS expo centering next-gen server architectures.",
+    showLeaderboardRank: true,
     venueDetails: {
       ballroom: "Exhibition Hall C, Level 2",
       capacity: 1200,
@@ -525,6 +528,9 @@ interface DatabaseSchema {
   eventsList: EventPlannerItem[];
   boothVisits: BoothVisit[];
   networkingConnections: NetworkingConnection[];
+  whitelistedEmails: string[];
+  whitelistedStaffEmails: string[];
+  users: AppUser[];
 }
 
 // Memory database loaded from or backed up to JSON
@@ -539,7 +545,19 @@ let db: DatabaseSchema = {
   auditLogs: INITIAL_AUDIT_LOGS,
   eventsList: DEFAULT_EVENTS_LIST,
   boothVisits: [],
-  networkingConnections: []
+  networkingConnections: [],
+  whitelistedEmails: ["manager@eventhub.com"],
+  whitelistedStaffEmails: ["staff@eventhub.com"],
+  users: [
+    {
+      id: "user-superadmin",
+      email: "alfian.n.wicaksono@gmail.com",
+      name: "Alfian Wicaksono",
+      role: "SUPER_ADMIN",
+      password: "SuperAdmin2026!",
+      createdAt: new Date().toISOString()
+    }
+  ]
 };
 
 // Helper to load database
@@ -557,6 +575,35 @@ function loadDb() {
       if (!db.networkingConnections) {
         db.networkingConnections = [];
       }
+      if (!db.whitelistedEmails) {
+        db.whitelistedEmails = ["manager@eventhub.com"];
+      }
+      if (!db.whitelistedStaffEmails) {
+        db.whitelistedStaffEmails = ["staff@eventhub.com"];
+      }
+      if (!db.users) {
+        db.users = [];
+      }
+      if (db.participants) {
+        db.participants.forEach(p => {
+          if (p.approved === undefined) {
+            p.approved = true;
+          }
+        });
+      }
+      // Seed superadmin if not present
+      const hasSuperAdmin = db.users.some(u => u.email.toLowerCase() === "alfian.n.wicaksono@gmail.com".toLowerCase());
+      if (!hasSuperAdmin) {
+        db.users.push({
+          id: "user-superadmin",
+          email: "alfian.n.wicaksono@gmail.com",
+          name: "Alfian Wicaksono",
+          role: "SUPER_ADMIN",
+          password: "SuperAdmin2026!",
+          createdAt: new Date().toISOString()
+        });
+      }
+      saveDb();
     } else {
       saveDb();
     }
@@ -592,7 +639,8 @@ function addAuditLog(actor: string, role: string, action: string, details: strin
 }
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // API Endpoints
 
@@ -635,7 +683,8 @@ app.post("/api/planner/events", (req, res) => {
         time: newEvent.time,
         schedule: newEvent.schedule.map(s => ({ time: s.time, activity: s.activity, description: s.description })),
         pointRules: newEvent.pointRules,
-        googleMapsUrl: newEvent.venueDetails?.googleMapsUrl
+        googleMapsUrl: newEvent.venueDetails?.googleMapsUrl,
+        showLeaderboardRank: newEvent.showLeaderboardRank !== false
       };
     }
 
@@ -670,7 +719,8 @@ app.post("/api/planner/events/duplicate", (req, res) => {
       time: duplicated.time,
       schedule: duplicated.schedule.map(s => ({ time: s.time, activity: s.activity, description: s.description })),
       pointRules: duplicated.pointRules,
-      googleMapsUrl: duplicated.venueDetails?.googleMapsUrl
+      googleMapsUrl: duplicated.venueDetails?.googleMapsUrl,
+      showLeaderboardRank: duplicated.showLeaderboardRank !== false
     };
     
     addAuditLog("Manager", "Event Manager", "DUPLICATE_EVENT", `Duplicated event "${sourceEvent.name}" into "${duplicated.name}"`, "SUCCESS");
@@ -718,7 +768,8 @@ app.post("/api/planner/config/all", (req, res) => {
         schedule: updatedEvent.schedule.map(s => ({ time: s.time, activity: s.activity, description: s.description })),
         pointRules: updatedEvent.pointRules,
         googleMapsUrl: updatedEvent.venueDetails?.googleMapsUrl,
-        sponsorBooths: updatedEvent.sponsorBooths
+        sponsorBooths: updatedEvent.sponsorBooths,
+        showLeaderboardRank: updatedEvent.showLeaderboardRank !== false
       };
       
       if (updatedEvent.luckyDrawCategories && updatedEvent.luckyDrawCategories.length > 0) {
@@ -866,13 +917,31 @@ app.post("/api/participants", (req, res) => {
       points: 0,
       qrCode: `EH-${nextIdNum}-${email}`,
       invitationStatus: invitationStatus || "NOT_SENT",
-      invitationChannel: invitationChannel
+      invitationChannel: invitationChannel,
+      approved: true
     };
 
     db.participants.push(newParticipant);
     addAuditLog("Manager", "Event Manager", "PARTICIPANT_ADDED", `Manager manually added guest invitation: ${name} (${company}).`, "INFO");
     saveDb();
     res.json(newParticipant);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Approve or reject/disapprove a participant registration
+app.post("/api/participants/toggle-approve", (req, res) => {
+  try {
+    const { id, approved } = req.body;
+    const participant = db.participants.find(p => p.id === id);
+    if (!participant) {
+      return res.status(404).json({ error: "Participant not found" });
+    }
+    participant.approved = approved !== undefined ? !!approved : !participant.approved;
+    addAuditLog("Manager/Staff", "Admin/Staff Action", "PARTICIPANT_APPROVE", `${participant.approved ? 'Approved' : 'Unapproved'} participant registration: ${participant.name} (${participant.email}).`, "INFO");
+    saveDb();
+    res.json(participant);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
@@ -956,7 +1025,8 @@ app.post("/api/participants/bulk-import", (req, res) => {
           checkedIn: false,
           checkedInAt: null,
           points: 0,
-          qrCode: `EH-${nextIdNum}-${item.email}`
+          qrCode: `EH-${nextIdNum}-${item.email}`,
+          approved: true
         };
         db.participants.push(newPart);
         count++;
@@ -1007,13 +1077,320 @@ app.post("/api/participants/register", (req, res) => {
       tShirtSize: tShirtSize || "M",
       specialNeeds: specialNeeds || "",
       companyLogoUrl: companyLogoUrl || "",
-      avatarUrl: avatarUrl || ""
+      avatarUrl: avatarUrl || "",
+      approved: false
     };
 
     db.participants.push(newParticipant);
     addAuditLog("Participant", "Event Participant", "REGISTER", `New participant registered: ${name} (${company}).`, "INFO");
     saveDb();
     res.json(newParticipant);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Unified Login Route (handles Super Admin, Event Manager, and Participant)
+app.post("/api/auth/login", (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    // 1. Check administrative users (Super Admin & Event Manager)
+    const adminUser = db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (adminUser) {
+      if (adminUser.password !== password) {
+        return res.status(401).json({ error: "Incorrect password." });
+      }
+      if (adminUser.revoked) {
+        return res.status(403).json({ error: "Your access has been revoked by the Superadmin." });
+      }
+      return res.json({
+        id: adminUser.id,
+        email: adminUser.email,
+        name: adminUser.name,
+        role: adminUser.role,
+        isOrganizer: true
+      });
+    }
+
+    // 2. Check event participants
+    const participant = db.participants.find(p => p.email.toLowerCase() === email.toLowerCase());
+    if (participant) {
+      if (participant.password && participant.password !== password) {
+        return res.status(401).json({ error: "Incorrect password." });
+      }
+      if (participant.revoked) {
+        return res.status(403).json({ error: "Your access has been revoked by the Superadmin." });
+      }
+      // auto-set password if they log in and don't have one set yet
+      if (!participant.password && password) {
+        participant.password = password;
+        saveDb();
+      }
+      return res.json({
+        id: participant.id,
+        email: participant.email,
+        name: participant.name,
+        role: "PARTICIPANT",
+        participantDetails: participant,
+        isOrganizer: false
+      });
+    }
+
+    return res.status(404).json({ error: "No registered account found with this email." });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Register a new Event Manager
+app.post("/api/auth/register-manager", (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: "Name, email and password are required" });
+    }
+
+    // Check if whitelisted
+    const isWhitelisted = db.whitelistedEmails.some(e => e.toLowerCase() === email.toLowerCase());
+    if (!isWhitelisted && email.toLowerCase() !== "alfian.n.wicaksono@gmail.com") {
+      return res.status(403).json({ error: "Email is not whitelisted by the Superadmin. Please contact your Superadmin for access." });
+    }
+
+    // Check if already registered in db.users
+    const exists = db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (exists) {
+      return res.status(400).json({ error: "This email is already registered as an administrator/manager." });
+    }
+
+    const newManager: AppUser = {
+      id: `user-${Date.now()}`,
+      email: email.toLowerCase(),
+      name,
+      role: "EVENT_MANAGER",
+      password,
+      createdAt: new Date().toISOString()
+    };
+
+    db.users.push(newManager);
+    addAuditLog("Superadmin", "System Security", "REGISTER_MANAGER", `New Event Manager whitelisted and registered: ${name} (${email}).`, "SUCCESS");
+    saveDb();
+
+    res.json({
+      id: newManager.id,
+      email: newManager.email,
+      name: newManager.name,
+      role: newManager.role,
+      isOrganizer: true
+    });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Register a new Event Staff
+app.post("/api/auth/register-staff", (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: "Name, email and password are required" });
+    }
+
+    // Check if whitelisted for staff
+    const isWhitelisted = db.whitelistedStaffEmails.some(e => e.toLowerCase() === email.toLowerCase());
+    if (!isWhitelisted && email.toLowerCase() !== "alfian.n.wicaksono@gmail.com") {
+      return res.status(403).json({ error: "Email is not whitelisted by the Superadmin. Please contact your Superadmin for access." });
+    }
+
+    // Check if already registered in db.users
+    const exists = db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (exists) {
+      return res.status(400).json({ error: "This email is already registered as an administrator/staff." });
+    }
+
+    const newStaff: AppUser = {
+      id: `user-${Date.now()}`,
+      email: email.toLowerCase(),
+      name,
+      role: "EVENT_STAFF",
+      password,
+      createdAt: new Date().toISOString()
+    };
+
+    db.users.push(newStaff);
+    addAuditLog("Superadmin", "System Security", "REGISTER_STAFF", `New Event Staff whitelisted and registered: ${name} (${email}).`, "SUCCESS");
+    saveDb();
+
+    res.json({
+      id: newStaff.id,
+      email: newStaff.email,
+      name: newStaff.name,
+      role: newStaff.role,
+      isOrganizer: true
+    });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Admin Whitelist management
+app.get("/api/admin/whitelist", (req, res) => {
+  res.json(db.whitelistedEmails || []);
+});
+
+// Admin Staff Whitelist management
+app.get("/api/admin/staff-whitelist", (req, res) => {
+  res.json(db.whitelistedStaffEmails || []);
+});
+
+app.post("/api/admin/whitelist/add", (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    const cleanEmail = email.toLowerCase().trim();
+    if (db.whitelistedEmails.includes(cleanEmail)) {
+      return res.status(400).json({ error: "Email is already whitelisted." });
+    }
+    db.whitelistedEmails.push(cleanEmail);
+    addAuditLog("Superadmin", "System Security", "WHITELIST_ADD", `Added email to Event Manager whitelist: ${cleanEmail}`, "SUCCESS");
+    saveDb();
+    res.json(db.whitelistedEmails);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post("/api/admin/staff-whitelist/add", (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    const cleanEmail = email.toLowerCase().trim();
+    if (db.whitelistedStaffEmails.includes(cleanEmail)) {
+      return res.status(400).json({ error: "Email is already whitelisted." });
+    }
+    db.whitelistedStaffEmails.push(cleanEmail);
+    addAuditLog("Superadmin", "System Security", "STAFF_WHITELIST_ADD", `Added email to Event Staff whitelist: ${cleanEmail}`, "SUCCESS");
+    saveDb();
+    res.json(db.whitelistedStaffEmails);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post("/api/admin/whitelist/remove", (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    const cleanEmail = email.toLowerCase().trim();
+    db.whitelistedEmails = db.whitelistedEmails.filter(e => e !== cleanEmail);
+    
+    // Also revoke existing active managers with this email if any!
+    const manager = db.users.find(u => u.email.toLowerCase() === cleanEmail);
+    if (manager) {
+      manager.revoked = true;
+    }
+    
+    addAuditLog("Superadmin", "System Security", "WHITELIST_REMOVE", `Removed email from Event Manager whitelist: ${cleanEmail}`, "WARNING");
+    saveDb();
+    res.json(db.whitelistedEmails);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post("/api/admin/staff-whitelist/remove", (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+    const cleanEmail = email.toLowerCase().trim();
+    db.whitelistedStaffEmails = db.whitelistedStaffEmails.filter(e => e !== cleanEmail);
+    
+    // Also revoke existing active staff with this email if any!
+    const staff = db.users.find(u => u.email.toLowerCase() === cleanEmail);
+    if (staff) {
+      staff.revoked = true;
+    }
+    
+    addAuditLog("Superadmin", "System Security", "STAFF_WHITELIST_REMOVE", `Removed email from Event Staff whitelist: ${cleanEmail}`, "WARNING");
+    saveDb();
+    res.json(db.whitelistedStaffEmails);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Admin User Management list
+app.get("/api/admin/users", (req, res) => {
+  try {
+    // Return both administrative users and participants in a clean unified way
+    const admins = db.users.map(u => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      revoked: !!u.revoked,
+      createdAt: u.createdAt,
+      type: "USER"
+    }));
+
+    const parts = db.participants.map(p => ({
+      id: p.id,
+      name: p.name,
+      email: p.email,
+      role: "PARTICIPANT",
+      revoked: !!p.revoked,
+      createdAt: p.checkedInAt || new Date().toISOString(),
+      type: "PARTICIPANT"
+    }));
+
+    res.json([...admins, ...parts]);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Admin User Revocation toggle
+app.post("/api/admin/users/revoke", (req, res) => {
+  try {
+    const { targetId, targetType, revoke } = req.body;
+    if (!targetId || !targetType) {
+      return res.status(400).json({ error: "targetId and targetType are required" });
+    }
+
+    if (targetType === "USER") {
+      const user = db.users.find(u => u.id === targetId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      if (user.role === "SUPER_ADMIN") {
+        return res.status(400).json({ error: "Cannot revoke the Superadmin account!" });
+      }
+      user.revoked = !!revoke;
+      addAuditLog("Superadmin", "System Security", revoke ? "USER_REVOKE" : "USER_UNREVOKE", `${revoke ? 'Revoked' : 'Restored'} access for administrator: ${user.name} (${user.email})`, "WARNING");
+    } else if (targetType === "PARTICIPANT") {
+      const participant = db.participants.find(p => p.id === targetId);
+      if (!participant) {
+        return res.status(404).json({ error: "Participant not found" });
+      }
+      participant.revoked = !!revoke;
+      addAuditLog("Superadmin", "System Security", revoke ? "PARTICIPANT_REVOKE" : "PARTICIPANT_UNREVOKE", `${revoke ? 'Revoked' : 'Restored'} access for participant: ${participant.name} (${participant.email})`, "WARNING");
+    } else {
+      return res.status(400).json({ error: "Invalid targetType" });
+    }
+
+    saveDb();
+    res.json({ success: true });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
@@ -1031,6 +1408,11 @@ app.post("/api/participants/login", (req, res) => {
       return res.status(404).json({ error: "No registered participant found with this email." });
     }
     
+    // Check if participant's access has been revoked
+    if (participant.revoked) {
+      return res.status(403).json({ error: "Your access has been revoked by the Superadmin." });
+    }
+
     // backwards compatibility for pre-seeded users
     if (participant.password && participant.password !== password) {
       return res.status(401).json({ error: "Incorrect password." });
@@ -1108,7 +1490,8 @@ app.post("/api/participants/rsvp", (req, res) => {
         tShirtSize: tShirtSize || "M",
         specialNeeds: specialNeeds || "",
         companyLogoUrl: companyLogoUrl || "",
-        avatarUrl: avatarUrl || ""
+        avatarUrl: avatarUrl || "",
+        approved: false
       };
       db.participants.push(newPart);
       addAuditLog("Participant", "Event Participant", "RSVP_SUBMIT", `New RSVP submitted directly by ${email} with status ${rsvpStatus}.`, "INFO");

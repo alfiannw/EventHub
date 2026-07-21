@@ -20,6 +20,8 @@ export interface Participant {
   tShirtSize?: string;
   specialNeeds?: string;
   companyLogoUrl?: string;
+  revoked?: boolean;
+  approved?: boolean;
 }
 
 export type ActivityType =
@@ -102,6 +104,7 @@ export interface EventConfig {
   schedule: Array<{ time: string; activity: string; description?: string }>;
   pointRules: Record<string, number>;
   googleMapsUrl?: string;
+  showLeaderboardRank?: boolean;
   activities?: Array<{
     id: string;
     type: ActivityType | string;
@@ -134,6 +137,7 @@ export interface EventPlannerItem {
   isArchived: boolean;
   createdAt: string;
   description: string;
+  showLeaderboardRank?: boolean;
   venueDetails: {
     ballroom: string;
     capacity: number;
@@ -237,6 +241,16 @@ export interface NetworkingConnection {
   toParticipantPosition: string;
   pointsAwarded: number;
   connectedAt: string;
+}
+
+export interface AppUser {
+  id: string;
+  email: string;
+  name: string;
+  role: 'SUPER_ADMIN' | 'EVENT_MANAGER' | 'EVENT_STAFF';
+  password?: string;
+  revoked?: boolean;
+  createdAt: string;
 }
 
 

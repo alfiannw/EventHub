@@ -54,6 +54,7 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [eventDesc, setEventDesc] = useState('');
+  const [showLeaderboardRank, setShowLeaderboardRank] = useState(true);
   
   // Sub-config states
   const [venueBallroom, setVenueBallroom] = useState('');
@@ -119,6 +120,7 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
       setEventDate(currentEvent.date);
       setEventTime(currentEvent.time);
       setEventDesc(currentEvent.description || '');
+      setShowLeaderboardRank(currentEvent.showLeaderboardRank !== false);
 
       setVenueBallroom(currentEvent.venueDetails?.ballroom || '');
       setVenueCapacity(currentEvent.venueDetails?.capacity || 500);
@@ -166,6 +168,7 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
         date: eventDate,
         time: eventTime,
         description: eventDesc,
+        showLeaderboardRank,
         venueDetails: {
           ballroom: venueBallroom,
           capacity: venueCapacity,
@@ -625,7 +628,7 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div className="space-y-1">
                     <label className="text-[9px] font-bold text-slate-500 uppercase block">Venue</label>
                     <input 
@@ -653,18 +656,32 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
                       className="tech-input w-full text-xs" 
                     />
                   </div>
+                  <div className="space-y-1 flex flex-col justify-end">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase block">Participant Leaderboard</label>
+                    <label className="flex items-center gap-2 cursor-pointer h-[34px] bg-white border-2 border-[#141414] rounded-[10px] px-2.5 transition-all hover:bg-slate-50 shadow-[1.5px_1.5px_0px_0px_#141414]">
+                      <input 
+                        type="checkbox" 
+                        checked={showLeaderboardRank}
+                        onChange={(e) => setShowLeaderboardRank(e.target.checked)}
+                        className="accent-black h-3.5 w-3.5 cursor-pointer" 
+                      />
+                      <span className="font-bold text-[9px] select-none text-[#141414] tracking-tighter">
+                        {showLeaderboardRank ? "RANKING VISIBLE" : "RANKING HIDDEN"}
+                      </span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
               {/* TABS SELECTOR */}
-              <div className="flex flex-wrap border-b border-[#141414] bg-[#DFDEDA] p-0.5 gap-0.5">
+              <div className="flex flex-wrap bg-white p-1 border-2 border-[#141414] rounded-xl gap-1 mb-6">
                 {[
-                  { id: 'VENUE_SEATING', label: '01 Venue & Seating', icon: MapPin },
-                  { id: 'SCHEDULE_ACTIVITIES', label: '02 Schedule & Activities', icon: Calendar },
-                  { id: 'POINTS', label: '03 Point Rules', icon: Award },
-                  { id: 'SPONSORS', label: '04 Booths & Sponsors', icon: Layout },
-                  { id: 'LUCKY_DRAWS', label: '05 Lucky Draw & Prizes', icon: Gift },
-                  { id: 'FORM_OUTREACH', label: '06 Form & Communications', icon: Send }
+                  { id: 'VENUE_SEATING', label: '01 Venue & Seating', icon: MapPin, color: '#C5F237' },
+                  { id: 'SCHEDULE_ACTIVITIES', label: '02 Schedule & Activities', icon: Calendar, color: '#38BDF8' },
+                  { id: 'POINTS', label: '03 Point Rules', icon: Award, color: '#FFE600' },
+                  { id: 'SPONSORS', label: '04 Booths & Sponsors', icon: Layout, color: '#DDD6FE' },
+                  { id: 'LUCKY_DRAWS', label: '05 Lucky Draw & Prizes', icon: Gift, color: '#F472B6' },
+                  { id: 'FORM_OUTREACH', label: '06 Form & Communications', icon: Send, color: '#FF6B00' }
                 ].map((tab) => {
                   const Icon = tab.icon;
                   const isCurrent = activeTab === tab.id;
@@ -672,11 +689,16 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex-1 min-w-[130px] py-1.5 px-2 font-mono text-[9px] uppercase font-black tracking-tighter flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-                        isCurrent ? 'bg-[#141414] text-white' : 'text-slate-700 hover:bg-[#CFCECA]'
+                      style={{
+                        backgroundColor: isCurrent ? tab.color : 'transparent',
+                      }}
+                      className={`flex-1 min-w-[130px] py-2 px-2.5 font-mono text-[9px] uppercase font-black tracking-tighter flex items-center justify-center gap-1.5 transition-all border-2 rounded-[8px] cursor-pointer ${
+                        isCurrent 
+                          ? 'text-[#141414] border-[#141414] shadow-[1.5px_1.5px_0px_0px_#141414]' 
+                          : 'text-slate-700 border-slate-200 hover:bg-slate-50'
                       }`}
                     >
-                      <Icon className="w-3 h-3" />
+                      <Icon className="w-3.5 h-3.5" style={{ color: isCurrent ? '#141414' : 'inherit' }} />
                       <span>{tab.label}</span>
                     </button>
                   );

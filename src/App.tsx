@@ -8,14 +8,62 @@ import SponsorBoothManager from './components/SponsorBoothManager';
 import SuperAdminPanel from './components/SuperAdminPanel';
 import InvitationManager from './components/InvitationManager';
 import EventPlanner from './components/EventPlanner';
+import UnifiedLoginPortal from './components/UnifiedLoginPortal';
 import LeaderboardSprintPage from '../sprint-9-leaderboard/frontend/src/app/leaderboard/page';
 import DoorPrizeSprintPage from '../sprint-10-doorprize/frontend/src/app/doorprize/page';
 import LuckyDrawSprintPage from '../sprint-11-luckydraw/frontend/src/app/luckydraw/page';
 import { Participant, SongRequest, ActivitySubmission, LuckyDrawWinner, AuditLog, EventConfig, DoorPrizeCategory, LuckyDrawCategory } from './types';
-import { Calendar, MapPin, Award, Users, ShieldAlert, FileText, Settings, Play, Trophy, Gift, Sliders, Sparkles } from 'lucide-react';
+import { Calendar, MapPin, Award, Users, ShieldAlert, FileText, Settings, Play, Trophy, Gift, Sliders, Sparkles, LogOut } from 'lucide-react';
 
 export default function App() {
-  const [activeRole, setActiveRole] = useState<'ADMIN' | 'MANAGER' | 'STAFF' | 'PARTICIPANT'>('MANAGER');
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    const saved = localStorage.getItem('eventhub_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [activeRole, setActiveRole] = useState<'ADMIN' | 'MANAGER' | 'STAFF' | 'PARTICIPANT'>(() => {
+    const saved = localStorage.getItem('eventhub_user');
+    if (saved) {
+      const user = JSON.parse(saved);
+      if (user.role === 'SUPER_ADMIN') return 'ADMIN';
+      if (user.role === 'EVENT_MANAGER') return 'MANAGER';
+      if (user.role === 'EVENT_STAFF') return 'STAFF';
+      return 'PARTICIPANT';
+    }
+    return 'PARTICIPANT';
+  });
+
+  // Automatically sync role and participant ID when currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('eventhub_user', JSON.stringify(currentUser));
+      if (currentUser.role === 'SUPER_ADMIN') {
+        setActiveRole('ADMIN');
+      } else if (currentUser.role === 'EVENT_MANAGER') {
+        setActiveRole('MANAGER');
+      } else if (currentUser.role === 'EVENT_STAFF') {
+        setActiveRole('STAFF');
+      } else {
+        setActiveRole('PARTICIPANT');
+        setSelectedParticipantId(currentUser.id);
+      }
+    } else {
+      localStorage.removeItem('eventhub_user');
+    }
+  }, [currentUser]);
+
+  // Safeguard role access: non-superadmin users are locked to their respective roles
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.role === 'EVENT_MANAGER' && activeRole !== 'MANAGER') {
+        setActiveRole('MANAGER');
+      } else if (currentUser.role === 'EVENT_STAFF' && activeRole !== 'STAFF') {
+        setActiveRole('STAFF');
+      } else if (currentUser.role === 'PARTICIPANT' && activeRole !== 'PARTICIPANT') {
+        setActiveRole('PARTICIPANT');
+      }
+    }
+  }, [activeRole, currentUser]);
   
   // Database States
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -190,6 +238,24 @@ export default function App() {
     await fetchAllData();
   };
 
+  const handleToggleApprove = async (id: string, approved: boolean) => {
+    const res = await fetch('/api/participants/toggle-approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, approved })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to update approval status.");
+    }
+    await fetchAllData();
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('eventhub_user');
+    setCurrentUser(null);
+  };
+
   const handleDrawWinner = async (categoryId: string) => {
     const res = await fetch('/api/lucky-draw/draw', {
       method: 'POST',
@@ -252,6 +318,10 @@ export default function App() {
   // Leaderboard lists
   const sortedLeaderboard = [...participants].sort((a, b) => b.points - a.points);
 
+  if (!currentUser) {
+    return <UnifiedLoginPortal onLoginSuccess={setCurrentUser} eventConfig={eventConfig} />;
+  }
+
   return (
     <div className="min-h-screen bg-[#E4E3E0] text-[#141414] flex flex-col font-sans selection:bg-[#141414] selection:text-white" id="eventhub-root">
       
@@ -265,6 +335,8 @@ export default function App() {
         setSelectedParticipantId={setSelectedParticipantId}
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       {/* Main Container */}
@@ -284,74 +356,88 @@ export default function App() {
           <div className="space-y-6">
             
             {/* Manager navigation controls */}
-            <div className="flex flex-wrap border-[1.5px] border-[#141414] bg-[#DFDEDA] p-1 rounded-none max-w-4xl gap-1">
+            <div className="flex flex-wrap bg-white p-2 border-2.5 border-[#141414] rounded-2xl max-w-5xl gap-2 shadow-[4px_4px_0px_0px_#141414] mb-8">
               <button
                 onClick={() => setManagerSubTab('PLANNER')}
-                className={`flex-1 py-2 px-3 text-[10px] font-mono uppercase font-black rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  managerSubTab === 'PLANNER' ? 'bg-[#141414] text-[#E4E3E0]' : 'text-[#141414] hover:bg-[#CFCECA]'
+                className={`flex-1 min-w-[120px] py-2 px-3 text-[10px] font-mono uppercase font-black rounded-[10px] transition-all border-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  managerSubTab === 'PLANNER' 
+                    ? 'bg-[#C5F237] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                    : 'bg-transparent text-[#141414] border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                <Sliders className="w-3.5 h-3.5 text-indigo-700" />
                 <span>00 Event Setup</span>
               </button>
 
               <button
                 onClick={() => setManagerSubTab('ANALYTICS')}
-                className={`flex-1 py-2 px-3 text-[10px] font-mono uppercase font-black rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  managerSubTab === 'ANALYTICS' ? 'bg-[#141414] text-[#E4E3E0]' : 'text-[#141414] hover:bg-[#CFCECA]'
+                className={`flex-1 min-w-[120px] py-2 px-3 text-[10px] font-mono uppercase font-black rounded-[10px] transition-all border-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  managerSubTab === 'ANALYTICS' 
+                    ? 'bg-[#38BDF8] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                    : 'bg-transparent text-[#141414] border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <FileText className="w-3.5 h-3.5" />
+                <FileText className="w-3.5 h-3.5 text-blue-700" />
                 <span>01 Live Analytics</span>
               </button>
 
               <button
                 onClick={() => setManagerSubTab('SPONSORS')}
-                className={`flex-1 py-2 px-3 text-[10px] font-mono uppercase font-black rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  managerSubTab === 'SPONSORS' ? 'bg-[#141414] text-[#E4E3E0]' : 'text-[#141414] hover:bg-[#CFCECA]'
+                className={`flex-1 min-w-[120px] py-2 px-3 text-[10px] font-mono uppercase font-black rounded-[10px] transition-all border-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  managerSubTab === 'SPONSORS' 
+                    ? 'bg-[#FFE600] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                    : 'bg-transparent text-[#141414] border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5 text-yellow-500" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                 <span>02 Sponsor Booths</span>
               </button>
               
               <button
                 onClick={() => setManagerSubTab('INVITATIONS')}
-                className={`flex-1 py-2 px-3 text-[10px] font-mono uppercase font-black rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  managerSubTab === 'INVITATIONS' ? 'bg-[#141414] text-[#E4E3E0]' : 'text-[#141414] hover:bg-[#CFCECA]'
+                className={`flex-1 min-w-[120px] py-2 px-3 text-[10px] font-mono uppercase font-black rounded-[10px] transition-all border-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  managerSubTab === 'INVITATIONS' 
+                    ? 'bg-[#DDD6FE] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                    : 'bg-transparent text-[#141414] border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <Settings className="w-3.5 h-3.5" />
+                <Settings className="w-3.5 h-3.5 text-purple-700" />
                 <span>03 RSVPs & Reminders</span>
               </button>
               
               <button
                 onClick={() => setManagerSubTab('LUCKY_DRAW')}
-                className={`flex-1 py-2 px-3 text-[10px] font-mono uppercase font-black rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  managerSubTab === 'LUCKY_DRAW' ? 'bg-[#141414] text-[#E4E3E0]' : 'text-[#141414] hover:bg-[#CFCECA]'
+                className={`flex-1 min-w-[120px] py-2 px-3 text-[10px] font-mono uppercase font-black rounded-[10px] transition-all border-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  managerSubTab === 'LUCKY_DRAW' 
+                    ? 'bg-[#F472B6] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                    : 'bg-transparent text-[#141414] border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <Play className="w-3.5 h-3.5" />
+                <Play className="w-3.5 h-3.5 text-pink-700" />
                 <span>04 Lucky Draw Wheel</span>
               </button>
 
               <button
                 onClick={() => setManagerSubTab('LEADERBOARD')}
-                className={`flex-1 py-2 px-3 text-[10px] font-mono uppercase font-black rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  managerSubTab === 'LEADERBOARD' ? 'bg-[#141414] text-[#E4E3E0]' : 'text-[#141414] hover:bg-[#CFCECA]'
+                className={`flex-1 min-w-[120px] py-2 px-3 text-[10px] font-mono uppercase font-black rounded-[10px] transition-all border-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  managerSubTab === 'LEADERBOARD' 
+                    ? 'bg-[#FF9F1C] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                    : 'bg-transparent text-[#141414] border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <Trophy className="w-3.5 h-3.5" />
+                <Trophy className="w-3.5 h-3.5 text-yellow-600" />
                 <span>05 Leaderboard & Swag</span>
               </button>
 
               <button
                 onClick={() => setManagerSubTab('DOOR_PRIZE')}
-                className={`flex-1 py-2 px-3 text-[10px] font-mono uppercase font-black rounded-none transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-                  managerSubTab === 'DOOR_PRIZE' ? 'bg-[#141414] text-[#E4E3E0]' : 'text-[#141414] hover:bg-[#CFCECA]'
+                className={`flex-1 min-w-[120px] py-2 px-3 text-[10px] font-mono uppercase font-black rounded-[10px] transition-all border-2 flex items-center justify-center gap-1.5 cursor-pointer ${
+                  managerSubTab === 'DOOR_PRIZE' 
+                    ? 'bg-[#A3E635] text-[#141414] border-[#141414] shadow-[2px_2px_0px_0px_#141414]' 
+                    : 'bg-transparent text-[#141414] border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <Gift className="w-3.5 h-3.5 text-[#00FF00]" />
+                <Gift className="w-3.5 h-3.5 text-[#141414]" />
                 <span>06 Door Prizes</span>
               </button>
             </div>
@@ -385,6 +471,7 @@ export default function App() {
                 luckyDraws={luckyDraws}
                 onUpdateConfig={handleUpdateConfig}
                 onBulkImport={handleBulkImport}
+                onToggleApprove={handleToggleApprove}
               />
             )}
 
@@ -413,6 +500,7 @@ export default function App() {
             onAwardCustomPoints={handleAwardCustomPoints}
             onUpdateSongStatus={handleUpdateSongStatus}
             eventConfig={eventConfig}
+            onToggleApprove={handleToggleApprove}
           />
         )}
 
@@ -431,14 +519,19 @@ export default function App() {
             onLoginParticipant={handleLoginParticipant}
             onUpdateProfile={handleUpdateProfile}
             onSelectParticipant={setSelectedParticipantId}
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
+            onLogout={handleLogout}
           />
         )}
       </main>
 
       {/* Footer bar */}
-      <footer className="bg-[#141414] border-t-[1.5px] border-[#141414] mt-12 py-4 px-4 text-[#E4E3E0] text-center text-[10px] font-mono">
-        <p>EVENTHUB SAAS ARCHITECTURE / NESTJS + NEXTJS + POSTGRESQL + REDIS — AUTHORIZED PERSONNEL ONLY — LOGGED AS: super_admin_01</p>
-      </footer>
+      {activeRole === 'ADMIN' && (
+        <footer className="bg-[#141414] border-t-[1.5px] border-[#141414] mt-12 py-4 px-4 text-[#E4E3E0] text-center text-[10px] font-mono">
+          <p>EVENTHUB SAAS ARCHITECTURE / NESTJS + NEXTJS + POSTGRESQL + REDIS — AUTHORIZED PERSONNEL ONLY — LOGGED AS: super_admin_01</p>
+        </footer>
+      )}
     </div>
   );
 }

@@ -21,7 +21,8 @@ import {
   FileSpreadsheet, 
   HelpCircle,
   Copy,
-  Clock
+  Clock,
+  ShieldAlert
 } from 'lucide-react';
 import { EventConfig, Participant, DoorPrizeCategory, LuckyDrawCategory } from '../types';
 import * as XLSX from 'xlsx';
@@ -33,6 +34,7 @@ interface InvitationManagerProps {
   luckyDraws: LuckyDrawCategory[];
   onUpdateConfig: (config: Partial<EventConfig>) => Promise<void>;
   onBulkImport: (guests: any[]) => Promise<void>;
+  onToggleApprove?: (id: string, approved: boolean) => Promise<void>;
 }
 
 export default function InvitationManager({
@@ -41,7 +43,8 @@ export default function InvitationManager({
   doorPrizes,
   luckyDraws,
   onUpdateConfig,
-  onBulkImport
+  onBulkImport,
+  onToggleApprove
 }: InvitationManagerProps) {
   
   // Tab states for Manager sub-module
@@ -464,6 +467,8 @@ export default function InvitationManager({
 
       // 2. Filter by status
       if (statusFilter === 'ALL') return true;
+      if (statusFilter === 'AWAITING_APPROVAL') return p.approved === false;
+      if (p.approved === false) return false;
       const status = p.invitationStatus || 'NOT_SENT';
       if (statusFilter === 'NOT_SENT' && status === 'NOT_SENT' && p.rsvpStatus === 'PENDING') return true;
       if (statusFilter === 'DELIVERED' && status === 'DELIVERED' && p.rsvpStatus === 'PENDING') return true;
@@ -508,7 +513,10 @@ export default function InvitationManager({
   };
 
   // Quick helper to map status strings to badges
-  const getStatusBadge = (status: string, rsvp: string) => {
+  const getStatusBadge = (status: string, rsvp: string, approved?: boolean) => {
+    if (approved === false) {
+      return <span className="bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 border border-amber-300 uppercase text-[8px] rounded-none">Pending Appr</span>;
+    }
     if (rsvp === 'YES' || status === 'REGISTERED') {
       return <span className="bg-[#00FF00]/15 text-emerald-800 font-bold px-1.5 py-0.5 border border-[#00FF00]/40 uppercase text-[8px] rounded-none">Registered</span>;
     }
@@ -1018,7 +1026,7 @@ export default function InvitationManager({
 
                   <div className="flex flex-wrap gap-1 items-center">
                     <span className="text-[8px] font-bold uppercase text-slate-400 mr-1">Filter:</span>
-                    {['ALL', 'NOT_SENT', 'DELIVERED', 'OPENED', 'REGISTERED', 'DECLINED'].map(filter => {
+                    {['ALL', 'AWAITING_APPROVAL', 'NOT_SENT', 'DELIVERED', 'OPENED', 'REGISTERED', 'DECLINED'].map(filter => {
                       const isActive = statusFilter === filter;
                       return (
                         <button
@@ -1084,7 +1092,7 @@ export default function InvitationManager({
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          {getStatusBadge(p.invitationStatus || 'NOT_SENT', p.rsvpStatus)}
+                          {getStatusBadge(p.invitationStatus || 'NOT_SENT', p.rsvpStatus, p.approved)}
                           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                         </div>
                       </div>
@@ -1212,6 +1220,29 @@ export default function InvitationManager({
                       Recipient: {activeParticipant.name} (ID: {activeParticipant.id})
                     </span>
                   </div>
+
+                  {activeParticipant.approved === false && (
+                    <div className="mx-5 mt-5 p-4 bg-amber-50 border-2 border-amber-500 text-amber-900 font-mono text-xs space-y-2.5">
+                      <div className="flex items-center gap-2 font-black uppercase text-[11px] tracking-tight text-amber-700">
+                        <ShieldAlert className="w-4 h-4" />
+                        <span>Awaiting Registration Approval</span>
+                      </div>
+                      <p className="text-[10px] text-slate-700 leading-relaxed">
+                        This participant registered via the signup form but has not been approved yet. They are currently blocked from entering the Participant Hub.
+                      </p>
+                      <button
+                        onClick={async () => {
+                          if (onToggleApprove) {
+                            await onToggleApprove(activeParticipant.id, true);
+                          }
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 border-2 border-[#141414] shadow-[2px_2px_0px_0px_rgba(20,20,20,1)] uppercase text-[9px] tracking-wider w-full flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Approve Participant Registration</span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* Visual simulated preview of Email/WA */}
                   <div className="p-5 space-y-4 text-xs bg-slate-50 border-b border-slate-200">
