@@ -682,7 +682,7 @@ export default function RegistrationPortal({
       "BEGIN:VEVENT",
       `SUMMARY:${title}`,
       `LOCATION:${venue}`,
-      `DESCRIPTION:Hello ${p.name},\\n\\nYou are registered for ${title}!\\n\\nYour Seating details: Table: ${p.tableNumber || 'General Seating'}, Seat: ${p.seatNumber || 'General'}\\nParticipant ID: ${p.id}\\n\\nWe look forward to seeing you there!`,
+      `DESCRIPTION:Hello ${p.name},\\n\\nYou are registered for ${title}!\\n\\nYour Seating details: Table & seat assignment will be disclosed at Check-In upon arrival at the venue.\\nParticipant ID: ${p.id}\\n\\nWe look forward to seeing you there!`,
       `DTSTART:${datePart}T090000`,
       `DTEND:${datePart}T170000`,
       "END:VEVENT",

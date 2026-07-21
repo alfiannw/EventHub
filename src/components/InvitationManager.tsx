@@ -55,6 +55,7 @@ export default function InvitationManager({
   const [eventVenue, setEventVenue] = useState(eventConfig?.venue || '');
   const [eventDate, setEventDate] = useState(eventConfig?.date || '');
   const [eventTime, setEventTime] = useState(eventConfig?.time || '');
+  const [appUrl, setAppUrl] = useState(eventConfig?.appUrl || '');
   const [configSuccess, setConfigSuccess] = useState(false);
 
   // Manual participant form states
@@ -105,6 +106,7 @@ export default function InvitationManager({
       setEventVenue(eventConfig.venue);
       setEventDate(eventConfig.date);
       setEventTime(eventConfig.time);
+      setAppUrl(eventConfig.appUrl || '');
     }
   }, [eventConfig]);
 
@@ -165,7 +167,8 @@ export default function InvitationManager({
         name: eventName,
         venue: eventVenue,
         date: eventDate,
-        time: eventTime
+        time: eventTime,
+        appUrl: appUrl
       });
       setConfigSuccess(true);
       setTimeout(() => setConfigSuccess(false), 3000);
@@ -383,16 +386,24 @@ export default function InvitationManager({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           participantIds: finalIds,
-          channel: selectedChannel
+          channel: selectedChannel,
+          emailSubject,
+          emailBody,
+          waMessage
         })
       });
 
       if (!res.ok) {
-        throw new Error("Broadcast server response error.");
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Broadcast server response error.");
       }
 
       const result = await res.json();
-      setDispatchResult(`[SUCCESS] Dispatched ${result.countSent} invitations successfully via ${selectedChannel}!`);
+      if (result.warning) {
+        setDispatchResult(`[WARNING] ${result.warning}`);
+      } else {
+        setDispatchResult(`[SUCCESS] Dispatched ${result.countSent} invitations successfully via ${selectedChannel}!`);
+      }
       setCheckedGuests({});
       // Trigger App.tsx reload
       await onBulkImport([]);
@@ -435,7 +446,7 @@ export default function InvitationManager({
       "BEGIN:VEVENT",
       `SUMMARY:${title}`,
       `LOCATION:${venue}`,
-      `DESCRIPTION:Hello ${participant.name},\\n\\nYou are cordially invited to attend ${title}.\\n\\nYour Seating details: Table: ${participant.tableNumber || 'Pending'}, Seat: ${participant.seatNumber || 'Pending'}\\n\\nManage your RSVP & View details here: ${window.location.origin}/rsvp?id=${participant.id}\\n\\nWe look forward to seeing you there!`,
+      `DESCRIPTION:Hello ${participant.name},\\n\\nYou are cordially invited to attend ${title}.\\n\\nYour Seating details: Table & seat assignment will be disclosed at Check-In upon arrival at the venue.\\n\\nManage your RSVP & View details here: ${window.location.origin}/rsvp?id=${participant.id}\\n\\nWe look forward to seeing you there!`,
       `DTSTART:${datePart}T090000`,
       `DTEND:${datePart}T170000`,
       "END:VEVENT",
@@ -681,6 +692,20 @@ export default function InvitationManager({
                       className="tech-input w-full"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-500 uppercase block">Application Base URL (Production Link)</label>
+                  <input
+                    type="url"
+                    placeholder="e.g. https://eventhub.alfianwicaksono.com"
+                    value={appUrl}
+                    onChange={(e) => setAppUrl(e.target.value)}
+                    className="tech-input w-full"
+                  />
+                  <p className="text-[9px] text-slate-500 font-serif-italic">
+                    Digunakan sebagai tautan dasar (base URL) untuk tautan RSVP/Akses Digital di email undangan.
+                  </p>
                 </div>
 
                 <button
@@ -976,16 +1001,18 @@ export default function InvitationManager({
                     <span>Email</span>
                     <span>Status</span>
                   </div>
-                  {participants.slice(0, 4).map((p, i) => (
-                    <div key={i} className="flex justify-between py-0.5 border-b border-neutral-900 text-[9px]">
-                      <span className="text-[#E4E3E0] truncate max-w-[100px]">{p.name}</span>
-                      <span className="text-gray-400 truncate max-w-[130px]">{p.email}</span>
-                      <span className="text-[#00FF00] font-bold uppercase shrink-0">
-                        {p.rsvpStatus === 'YES' ? 'YES' : p.rsvpStatus === 'NO' ? 'NO' : 'PENDING'}
-                      </span>
-                    </div>
-                  ))}
-                  <div className="text-center font-bold text-[8px] text-gray-500 pt-1.5 uppercase">
+                  <div className="max-h-[140px] overflow-y-auto pr-1 space-y-0.5">
+                    {participants.map((p, i) => (
+                      <div key={p.id || i} className="flex justify-between py-0.5 border-b border-neutral-900 text-[9px]">
+                        <span className="text-[#E4E3E0] truncate max-w-[100px]" title={p.name}>{p.name}</span>
+                        <span className="text-gray-400 truncate max-w-[130px]" title={p.email}>{p.email}</span>
+                        <span className="text-[#00FF00] font-bold uppercase shrink-0">
+                          {p.rsvpStatus === 'YES' ? 'YES' : p.rsvpStatus === 'NO' ? 'NO' : 'PENDING'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-center font-bold text-[8px] text-gray-500 pt-1.5 uppercase border-t border-neutral-800 mt-1">
                     Total: {participants.length} guests are saved on real database.
                   </div>
                 </div>
@@ -1270,10 +1297,7 @@ export default function InvitationManager({
                       {/* 1. Personalized Greeting */}
                       <div className="space-y-2">
                         <span className="font-bold text-indigo-800 uppercase text-[9px] tracking-wider block">[ 1. Personalized Greeting ]</span>
-                        <p className="text-slate-800 font-bold font-mono text-[11px] leading-relaxed">
-                          Dear {activeParticipant.name},
-                        </p>
-                        <p className="text-slate-600 leading-relaxed font-mono text-[10px]">
+                        <p className="text-slate-600 leading-relaxed font-mono text-[10px] whitespace-pre-wrap">
                           {selectedChannel === 'EMAIL' ? personalizedEmailBody : personalizedWaMessage}
                         </p>
                       </div>
@@ -1286,9 +1310,9 @@ export default function InvitationManager({
                           <span className="text-slate-500 text-[9px] block">{activeParticipant.position} at {activeParticipant.company}</span>
                         </div>
                         <div>
-                          <span className="text-[8px] text-slate-400 font-bold block uppercase">SEATING ASSIGNMENT</span>
-                          <span className="font-bold text-indigo-800 block">Table: {activeParticipant.tableNumber || 'Pending'}</span>
-                          <span className="text-slate-600 text-[9px] block">Seat Number: {activeParticipant.seatNumber || 'Pending'}</span>
+                          <span className="text-[8px] text-slate-400 font-bold block uppercase font-sans">SEATING ASSIGNMENT</span>
+                          <span className="font-bold text-amber-600 block">Tersedia saat Check-In</span>
+                          <span className="text-slate-500 text-[8.5px] block leading-tight mt-0.5">Silakan lakukan check-in di gate masuk untuk mendapatkan nomor meja dan kursi Anda.</span>
                         </div>
                       </div>
 

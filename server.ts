@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import nodemailer from "nodemailer";
 import { createServer as createViteServer } from "vite";
 import { Participant, ActivitySubmission, SongRequest, DoorPrizeCategory, LuckyDrawCategory, LuckyDrawWinner, AuditLog, EventConfig, ActivityType, EventPlannerItem, BoothVisit, NetworkingConnection, AppUser } from "./src/types";
 
@@ -681,6 +682,7 @@ app.post("/api/planner/events", (req, res) => {
         venue: newEvent.venue,
         date: newEvent.date,
         time: newEvent.time,
+        appUrl: db.eventConfig?.appUrl,
         schedule: newEvent.schedule.map(s => ({ time: s.time, activity: s.activity, description: s.description })),
         pointRules: newEvent.pointRules,
         googleMapsUrl: newEvent.venueDetails?.googleMapsUrl,
@@ -717,6 +719,7 @@ app.post("/api/planner/events/duplicate", (req, res) => {
       venue: duplicated.venue,
       date: duplicated.date,
       time: duplicated.time,
+      appUrl: db.eventConfig?.appUrl,
       schedule: duplicated.schedule.map(s => ({ time: s.time, activity: s.activity, description: s.description })),
       pointRules: duplicated.pointRules,
       googleMapsUrl: duplicated.venueDetails?.googleMapsUrl,
@@ -765,6 +768,7 @@ app.post("/api/planner/config/all", (req, res) => {
         venue: updatedEvent.venue,
         date: updatedEvent.date,
         time: updatedEvent.time,
+        appUrl: db.eventConfig?.appUrl,
         schedule: updatedEvent.schedule.map(s => ({ time: s.time, activity: s.activity, description: s.description })),
         pointRules: updatedEvent.pointRules,
         googleMapsUrl: updatedEvent.venueDetails?.googleMapsUrl,
@@ -947,30 +951,266 @@ app.post("/api/participants/toggle-approve", (req, res) => {
   }
 });
 
-// Send invitations endpoint (updates status to DELIVERED)
-app.post("/api/invitations/send", (req, res) => {
+// Send invitations endpoint (updates status to DELIVERED and sends email if SMTP is configured)
+app.post("/api/invitations/send", async (req, res) => {
   try {
-    const { participantIds, channel } = req.body;
+    const { participantIds, channel, emailSubject, emailBody, waMessage } = req.body;
     if (!participantIds || !Array.isArray(participantIds) || !channel) {
       return res.status(400).json({ error: "participantIds array and channel are required" });
     }
 
-    let count = 0;
-    participantIds.forEach(id => {
-      const participant = db.participants.find(p => p.id === id);
-      if (participant) {
-        participant.invitationStatus = "DELIVERED";
-        participant.invitationChannel = channel;
-        count++;
-      }
-    });
+    // SMTP configuration check
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = parseInt(process.env.SMTP_PORT || "587", 10);
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpFrom = process.env.SMTP_FROM || smtpUser;
 
-    if (count > 0) {
-      addAuditLog("Manager", "Event Manager", "INVITATION_SENT", `Dispatched ${count} invitations via ${channel}.`, "INFO");
-      saveDb();
+    const hasSmtpConfig = smtpHost && smtpUser && smtpPass;
+
+    let count = 0;
+    const errors: string[] = [];
+
+    // Base URL for links prioritizing custom configured appUrl, then env APP_URL, then request headers
+    let origin = db.eventConfig?.appUrl || "";
+    if (!origin && process.env.APP_URL && process.env.APP_URL !== "MY_APP_URL") {
+      origin = process.env.APP_URL;
+    }
+    if (!origin) {
+      origin = req.get('origin') || `${req.protocol}://${req.get('host')}`;
     }
 
-    res.json({ success: true, countSent: count });
+    // Clean trailing slash
+    if (origin && origin.endsWith("/")) {
+      origin = origin.substring(0, origin.length - 1);
+    }
+
+    if (channel === "EMAIL") {
+      if (!hasSmtpConfig) {
+        // Fallback simulation mode
+        participantIds.forEach(id => {
+          const participant = db.participants.find(p => p.id === id);
+          if (participant) {
+            participant.invitationStatus = "DELIVERED";
+            participant.invitationChannel = "EMAIL";
+            count++;
+          }
+        });
+
+        if (count > 0) {
+          addAuditLog("Manager", "Event Manager", "INVITATION_SENT_SIMULATED", `Simulated dispatch of ${count} invitations via EMAIL (SMTP not configured).`, "WARNING");
+          saveDb();
+        }
+
+        return res.json({
+          success: true,
+          countSent: count,
+          warning: `Dispatched ${count} guest(s) in system, but REAL EMAILS could not be sent because SMTP is not configured in .env. Silakan tentukan SMTP_HOST, SMTP_PORT, SMTP_USER, dan SMTP_PASS di environment variable.`
+        });
+      }
+
+      // Create nodemailer transport
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465, // true for 465, false for other ports
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+
+      // Verify connection configuration
+      try {
+        await transporter.verify();
+      } catch (verifyErr: any) {
+        console.error("SMTP Verify Error:", verifyErr);
+        return res.status(500).json({
+          error: `Gagal menghubungkan ke server SMTP. Pastikan kredensial SMTP_HOST, SMTP_PORT, SMTP_USER, dan SMTP_PASS benar. Error: ${verifyErr.message}`
+        });
+      }
+
+      // Dynamic template values substitution & mailing
+      for (const id of participantIds) {
+        const participant = db.participants.find(p => p.id === id);
+        if (participant) {
+          try {
+            // Replace templates
+            const rsvpLink = `${origin}/rsvp?id=${participant.id}`;
+            const subject = (emailSubject || "Exclusive Invitation")
+              .replace(/\[Name\]/g, participant.name)
+              .replace(/\[Date\]/g, db.eventConfig?.date || "2026-07-15")
+              .replace(/\[Time\]/g, db.eventConfig?.time || "09:00 AM - 05:00 PM")
+              .replace(/\[Venue\]/g, db.eventConfig?.venue || "Grand Ballroom")
+              .replace(/\[MapLink\]/g, db.eventConfig?.googleMapsUrl || "https://maps.google.com");
+
+            const textBody = (emailBody || "")
+              .replace(/\[Name\]/g, participant.name)
+              .replace(/\[Date\]/g, db.eventConfig?.date || "2026-07-15")
+              .replace(/\[Time\]/g, db.eventConfig?.time || "09:00 AM - 05:00 PM")
+              .replace(/\[Venue\]/g, db.eventConfig?.venue || "Grand Ballroom")
+              .replace(/\[MapLink\]/g, db.eventConfig?.googleMapsUrl || "https://maps.google.com")
+              .replace(/\[Link\]/g, rsvpLink)
+              .replace(/\[ID\]/g, participant.id);
+
+            // Construct dynamic schedule list HTML
+            let scheduleHtml = "";
+            if (db.eventConfig?.schedule && db.eventConfig.schedule.length > 0) {
+              scheduleHtml = db.eventConfig.schedule.map(item => `
+                <div style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-family: 'Courier New', Courier, monospace; font-size: 10px;">
+                  <span style="font-weight: bold; color: #0f172a; text-transform: uppercase; display: inline-block; width: 90px;">${item.time}</span>
+                  <span style="color: #475569; display: inline-block;">${item.activity}</span>
+                </div>
+              `).join("");
+            } else {
+              scheduleHtml = `<div style="padding: 16px; text-align: center; color: #94a3b8; font-size: 10px; font-family: 'Courier New', Courier, monospace;">No scheduled activities found in config.</div>`;
+            }
+
+            // Construct nice, modern HTML email body matching Live Dispatch Simulation Preview EXACTLY
+            const htmlContent = `
+              <div style="background-color: #f1f5f9; padding: 40px 16px; font-family: 'Courier New', Courier, monospace;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 24px; border: 2px solid #141414; background-color: #ffffff; box-shadow: 4px 4px 0px 0px #141414; box-sizing: border-box;">
+                  
+                  <!-- Logo / Title Banner -->
+                  <div style="text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 16px; margin-bottom: 20px;">
+                    <span style="font-size: 10px; font-weight: 900; color: #4338ca; text-transform: uppercase; letter-spacing: 2px; display: block;">EH // DIGITAL CAMPAIGN PASS</span>
+                    <h4 style="font-weight: bold; font-size: 14px; color: #0f172a; text-transform: uppercase; margin: 4px 0 0 0;">
+                      ${db.eventConfig?.name || "Global Tech Summit 2026"}
+                    </h4>
+                  </div>
+
+                  <!-- 1. Personalized Greeting -->
+                  <div style="margin-bottom: 20px;">
+                    <span style="font-weight: bold; color: #3730a3; text-transform: uppercase; font-size: 9px; letter-spacing: 1px; display: block;">[ 1. Personalized Greeting ]</span>
+                    <p style="font-size: 12px; color: #475569; line-height: 1.6; white-space: pre-wrap; margin-top: 8px;">${textBody}</p>
+                  </div>
+
+                  <!-- Seating, Table and personalized details -->
+                  <div style="background-color: #f8fafc; padding: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                    <table style="width: 100%; border-collapse: collapse; font-family: 'Courier New', Courier, monospace; font-size: 11px;">
+                      <tr>
+                        <td style="width: 50%; vertical-align: top; padding-right: 8px; border-right: 1px solid #e2e8f0;">
+                          <span style="font-size: 8px; color: #94a3b8; font-weight: bold; display: block; text-transform: uppercase;">CAMPAIGN TARGET GUEST</span>
+                          <span style="font-weight: bold; color: #0f172a; display: block; margin-top: 2px; font-size: 11px;">${participant.name}</span>
+                          <span style="color: #64748b; font-size: 9px; display: block; margin-top: 1px;">${participant.position || 'Attendee'} at ${participant.company || 'Independent'}</span>
+                        </td>
+                        <td style="width: 50%; vertical-align: top; padding-left: 12px;">
+                          <span style="font-size: 8px; color: #94a3b8; font-weight: bold; display: block; text-transform: uppercase;">SEATING ASSIGNMENT</span>
+                          <span style="font-weight: bold; color: #d97706; display: block; margin-top: 2px; font-size: 11px;">Tersedia saat Check-In</span>
+                          <span style="color: #64748b; font-size: 8.5px; display: block; line-height: 1.3; margin-top: 2px;">Silakan lakukan check-in di gate masuk untuk mendapatkan nomor meja dan kursi Anda.</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+
+                  <!-- 2. Agenda Timeline -->
+                  <div style="margin-bottom: 20px;">
+                    <span style="font-weight: bold; color: #3730a3; text-transform: uppercase; font-size: 9px; letter-spacing: 1px; display: block; margin-bottom: 8px;">[ 2. Agenda Timeline ]</span>
+                    <div style="border: 1px solid #e2e8f0; background-color: #f8fafc; padding: 4px;">
+                      ${scheduleHtml}
+                    </div>
+                  </div>
+
+                  <!-- 3. Interactive Guest Actions -->
+                  <div style="margin-bottom: 20px;">
+                    <span style="font-weight: bold; color: #3730a3; text-transform: uppercase; font-size: 9px; letter-spacing: 1px; display: block;">[ 3. Interactive Guest Actions ]</span>
+                    
+                    <div style="margin-top: 12px; text-align: center;">
+                      <a href="${rsvpLink}" target="_blank" style="background-color: #141414; color: #ffffff; padding: 12px 24px; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 10px; letter-spacing: 1px; display: inline-block; border: 2px solid #141414;">
+                        Confirm RSVP / Digital Pass
+                      </a>
+                    </div>
+
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-top: 12px; font-size: 9px;">
+                      <span style="color: #94a3b8; font-weight: bold; text-transform: uppercase; display: inline-block; margin-right: 4px;">Invitation Link:</span>
+                      <a href="${rsvpLink}" target="_blank" style="color: #3b82f6; word-break: break-all; text-decoration: none;">${rsvpLink}</a>
+                    </div>
+                  </div>
+
+                  <!-- 4. Venue Coordinates & Location -->
+                  <div style="margin-bottom: 10px;">
+                    <span style="font-weight: bold; color: #3730a3; text-transform: uppercase; font-size: 9px; letter-spacing: 1px; display: block; margin-bottom: 8px;">[ 4. Venue Coordinates & Location ]</span>
+                    
+                    <div style="border: 1px solid #cbd5e1; padding: 12px; background-color: #f5f3ff;">
+                      <table style="width: 100%; border-collapse: collapse; font-family: 'Courier New', Courier, monospace; font-size: 10px;">
+                        <tr>
+                          <td style="width: 100px; vertical-align: top; padding-right: 12px;">
+                            <div style="background-color: #DFDEDA; border: 1px solid #141414; width: 90px; height: 60px; text-align: center; padding-top: 12px; box-sizing: border-box;">
+                              <span style="font-size: 16px; display: block;">📍</span>
+                              <span style="font-size: 7px; font-weight: bold; color: #141414; letter-spacing: -0.5px; text-transform: uppercase; display: block; margin-top: 2px;">SIMULATED MAP</span>
+                            </div>
+                          </td>
+                          <td style="vertical-align: top;">
+                            <p style="font-weight: bold; color: #0f172a; margin: 0; font-size: 11px;">
+                              📍 ${db.eventConfig?.venue || 'Grand Ballroom'}
+                            </p>
+                            <p style="color: #64748b; font-size: 9px; margin: 3px 0 0 0;">Coordinates: 37.7749° N, 122.4194° W</p>
+                            <p style="color: #475569; font-size: 9px; font-style: italic; margin: 3px 0 0 0; line-height: 1.3;">Valet parking available at Tower Gate. Self-parking validated up to 8 hours.</p>
+                            ${db.eventConfig?.googleMapsUrl ? `
+                              <div style="margin-top: 8px;">
+                                <a href="${db.eventConfig.googleMapsUrl}" target="_blank" style="background-color: #141414; color: #ffffff; text-decoration: none; font-weight: bold; text-transform: uppercase; font-size: 8px; letter-spacing: 0.5px; padding: 4px 8px; display: inline-block; border: 1px solid #141414;">
+                                  📍 Get Position on Google Maps
+                                </a>
+                              </div>
+                            ` : ""}
+                          </td>
+                        </tr>
+                      </table>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            `;
+
+            await transporter.sendMail({
+              from: smtpFrom,
+              to: participant.email,
+              subject: subject,
+              text: textBody + `\n\nConfirm RSVP here: ${rsvpLink}`,
+              html: htmlContent,
+            });
+
+            participant.invitationStatus = "DELIVERED";
+            participant.invitationChannel = "EMAIL";
+            count++;
+          } catch (mailErr: any) {
+            console.error(`Gagal mengirim email ke ${participant.email}:`, mailErr);
+            errors.push(`${participant.name} (${participant.email}): ${mailErr.message}`);
+          }
+        }
+      }
+
+      if (count > 0) {
+        addAuditLog("Manager", "Event Manager", "INVITATION_SENT", `Dispatched ${count} real emails successfully via SMTP.`, "INFO");
+        saveDb();
+      }
+
+      if (errors.length > 0) {
+        return res.status(500).json({
+          error: `Gagal mengirim ke beberapa guest: ${errors.join(", ")}`
+        });
+      }
+
+      return res.json({ success: true, countSent: count });
+    } else {
+      // WHATSAPP channel or others (simulated / manual)
+      participantIds.forEach(id => {
+        const participant = db.participants.find(p => p.id === id);
+        if (participant) {
+          participant.invitationStatus = "DELIVERED";
+          participant.invitationChannel = channel;
+          count++;
+        }
+      });
+
+      if (count > 0) {
+        addAuditLog("Manager", "Event Manager", "INVITATION_SENT", `Dispatched ${count} invitations via WHATSAPP (Simulated).`, "INFO");
+        saveDb();
+      }
+
+      res.json({ success: true, countSent: count });
+    }
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }

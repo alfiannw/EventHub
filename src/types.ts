@@ -101,6 +101,7 @@ export interface EventConfig {
   venue: string;
   date: string;
   time: string;
+  appUrl?: string;
   schedule: Array<{ time: string; activity: string; description?: string }>;
   pointRules: Record<string, number>;
   googleMapsUrl?: string;

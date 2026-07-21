@@ -88,6 +88,20 @@ export default function App() {
 
   // Load everything
   const fetchAllData = async () => {
+    const fetchJson = async (url: string, defaultValue: any) => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) return defaultValue;
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          return await response.json();
+        }
+        return defaultValue;
+      } catch {
+        return defaultValue;
+      }
+    };
+
     try {
       const [
         resConfig,
@@ -100,29 +114,29 @@ export default function App() {
         resDoorPrizes,
         resLuckyDrawConfig
       ] = await Promise.all([
-        fetch('/api/event-config').then(r => r.json()),
-        fetch('/api/participants').then(r => r.json()),
-        fetch('/api/activities').then(r => r.json()),
-        fetch('/api/songs').then(r => r.json()),
-        fetch('/api/lucky-draw/winners').then(r => r.json()),
-        fetch('/api/audit-logs').then(r => r.json()),
-        fetch('/api/stats').then(r => r.json()),
-        fetch('/api/door-prizes').then(r => r.json()),
-        fetch('/api/lucky-draw/config').then(r => r.json())
+        fetchJson('/api/event-config', null),
+        fetchJson('/api/participants', []),
+        fetchJson('/api/activities', []),
+        fetchJson('/api/songs', []),
+        fetchJson('/api/lucky-draw/winners', []),
+        fetchJson('/api/audit-logs', []),
+        fetchJson('/api/stats', null),
+        fetchJson('/api/door-prizes', []),
+        fetchJson('/api/lucky-draw/config', [])
       ]);
 
-      setEventConfig(resConfig);
-      setParticipants(resParticipants);
-      setActivitySubmissions(resActivities);
-      setSongRequests(resSongs);
-      setWinners(resWinners);
-      setAuditLogs(resAudit);
-      setStats(resStats);
-      setDoorPrizes(resDoorPrizes);
-      setLuckyDraws(resLuckyDrawConfig);
+      if (resConfig !== null) setEventConfig(resConfig);
+      setParticipants(resParticipants || []);
+      setActivitySubmissions(resActivities || []);
+      setSongRequests(resSongs || []);
+      setWinners(resWinners || []);
+      setAuditLogs(resAudit || []);
+      if (resStats !== null) setStats(resStats);
+      setDoorPrizes(resDoorPrizes || []);
+      setLuckyDraws(resLuckyDrawConfig || []);
 
       // Default the participant selector if empty or outdated
-      if (resParticipants.length > 0 && (!selectedParticipantId || !resParticipants.find(p => p.id === selectedParticipantId))) {
+      if (resParticipants && resParticipants.length > 0 && (!selectedParticipantId || !resParticipants.find(p => p.id === selectedParticipantId))) {
         setSelectedParticipantId(resParticipants[0].id);
       }
     } catch (err) {
