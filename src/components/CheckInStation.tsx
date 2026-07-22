@@ -3,7 +3,7 @@ import SearchableSelect from './SearchableSelect';
 import QRCodeDisplay from './QRCodeDisplay';
 import { 
   Search, QrCode, Printer, CheckCircle, Music, Award, ShieldAlert, Check, X, Camera, RefreshCw, 
-  Wifi, WifiOff, Upload, AlertTriangle, AlertCircle, Sparkles, Smartphone, Monitor, ShieldCheck, HelpCircle
+  Wifi, WifiOff, Upload, AlertTriangle, AlertCircle, Sparkles, Smartphone, Monitor, ShieldCheck, HelpCircle, MessageSquare
 } from 'lucide-react';
 import { Participant, SongRequest, ActivitySubmission, EventConfig } from '../types';
 import jsQR from 'jsqr';
@@ -122,7 +122,8 @@ export default function CheckInStation({
   const [customAwardSuccess, setCustomAwardSuccess] = useState(false);
 
   // Tabs within Staff view
-  const [staffTab, setStaffTab] = useState<'CHECKIN' | 'APPROVALS' | 'MUSIC' | 'CUSTOM_AWARDS'>('CHECKIN');
+  const [staffTab, setStaffTab] = useState<'CHECKIN' | 'APPROVALS' | 'MUSIC' | 'CUSTOM_AWARDS' | 'KSO_MESSAGES'>('CHECKIN');
+  const [ksoSearchQuery, setKsoSearchQuery] = useState('');
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -631,6 +632,17 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
   const pendingSubmissions = activitySubmissions.filter(s => s.status === 'PENDING');
   const pendingSongs = songRequests.filter(s => s.status === 'PENDING');
   const activeSongs = songRequests.filter(s => s.status === 'APPROVED');
+  const ksoSubmissions = activitySubmissions.filter(s => s.activityType === 'FEEDBACK');
+  const filteredKsoSubmissions = ksoSubmissions.filter(s => {
+    if (!ksoSearchQuery.trim()) return true;
+    const q = ksoSearchQuery.toLowerCase();
+    const p = participants.find(part => part.id === s.participantId || part.name.toLowerCase() === s.participantName.toLowerCase());
+    const nameMatch = s.participantName.toLowerCase().includes(q);
+    const companyMatch = p ? p.company.toLowerCase().includes(q) : false;
+    const contentMatch = s.content ? s.content.toLowerCase().includes(q) : false;
+    const idMatch = s.participantId.toLowerCase().includes(q);
+    return nameMatch || companyMatch || contentMatch || idMatch;
+  });
 
   const filteredParticipants = participants.filter(p => {
     const query = searchQuery.toLowerCase();
@@ -724,7 +736,7 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
           }`}
         >
           <QrCode className="w-3.5 h-3.5" />
-          <span>03.1 Reception Desk</span>
+          <span>Reception Desk</span>
         </button>
         <button
           onClick={() => setStaffTab('APPROVALS')}
@@ -733,7 +745,7 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
           }`}
         >
           <Award className="w-3.5 h-3.5" />
-          <span>03.2 Verification Queue</span>
+          <span>Verification Queue</span>
           {pendingSubmissions.length > 0 && (
             <span className="absolute -top-1 -right-1 h-5 w-5 bg-black text-[#00FF00] border border-[#00FF00] text-[10px] font-black rounded-none flex items-center justify-center">
               {pendingSubmissions.length}
@@ -747,7 +759,7 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
           }`}
         >
           <Music className="w-3.5 h-3.5" />
-          <span>03.3 Live Band Queue</span>
+          <span>Live Band Queue</span>
           {pendingSongs.length > 0 && (
             <span className="absolute -top-1 -right-1 h-5 w-5 bg-black text-[#00FF00] border border-[#00FF00] text-[10px] font-black rounded-none flex items-center justify-center">
               {pendingSongs.length}
@@ -761,7 +773,21 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
           }`}
         >
           <Award className="w-3.5 h-3.5" />
-          <span>03.4 Dispensation</span>
+          <span>Dispensation</span>
+        </button>
+        <button
+          onClick={() => setStaffTab('KSO_MESSAGES')}
+          className={`flex-1 min-w-[120px] py-2 px-3 text-xs font-bold uppercase transition-colors flex items-center justify-center gap-1.5 cursor-pointer relative ${
+            staffTab === 'KSO_MESSAGES' ? 'bg-[#141414] text-[#00FF00]' : 'text-slate-700 hover:text-[#141414] hover:bg-[#CFCECA]'
+          }`}
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          <span>KSO Messages</span>
+          {ksoSubmissions.length > 0 && (
+            <span className="absolute -top-1 -right-1 h-5 w-5 bg-black text-[#00FF00] border border-[#00FF00] text-[10px] font-black rounded-none flex items-center justify-center">
+              {ksoSubmissions.length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -788,7 +814,7 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
               <h3 className="font-mono font-bold text-slate-900 text-sm uppercase flex items-center justify-between border-b border-[#141414]/10 pb-2">
                 <span className="flex items-center gap-2">
                   <Monitor className="w-4 h-4 text-[#141414]" />
-                  <span>03.1 Guest Lookup & Check-In Desk</span>
+                  <span>Guest Lookup & Check-In Desk</span>
                 </span>
                 <span className="text-[10px] text-slate-500 font-mono">STAFF ACCESS ONLY</span>
               </h3>
@@ -1643,7 +1669,7 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
       {staffTab === 'APPROVALS' && (
         <div className="tech-card p-5">
           <h3 className="font-mono font-bold text-slate-900 text-sm uppercase border-b border-[#141414] pb-3 mb-4">
-            03.2 Pending Activity Verifications Queue ({pendingSubmissions.length})
+            Pending Activity Verifications Queue ({pendingSubmissions.length})
           </h3>
 
           {pendingSubmissions.length === 0 ? (
@@ -1723,7 +1749,7 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
           <div className="lg:col-span-6 space-y-4">
             <div className="tech-card p-5">
               <h3 className="font-mono font-bold text-slate-900 text-sm uppercase border-b border-[#141414] pb-3 mb-4">
-                03.3 Song Requests Verification Board ({pendingSongs.length})
+                Song Requests Verification Board ({pendingSongs.length})
               </h3>
 
               {pendingSongs.length === 0 ? (
@@ -1773,7 +1799,7 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
           <div className="lg:col-span-6 space-y-4">
             <div className="tech-card p-5">
               <h3 className="font-mono font-bold text-slate-900 text-sm uppercase border-b border-[#141414] pb-3 mb-4">
-                03.3 Live Band Song Queue ({activeSongs.length})
+                Live Band Song Queue ({activeSongs.length})
               </h3>
 
               {activeSongs.length === 0 ? (
@@ -1810,7 +1836,7 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
         <div className="tech-card p-5 max-w-xl mx-auto">
           <h3 className="font-mono font-bold text-slate-900 text-sm uppercase border-b border-[#141414] pb-3 mb-4 flex items-center gap-2">
             <Award className="w-5 h-5 text-slate-900" />
-            <span>03.4 Dispense Staff Spot Awards</span>
+            <span>Dispense Staff Spot Awards</span>
           </h3>
           <p className="text-xs text-slate-500 mb-4 font-serif-italic">
             Award points manually for active engagement, winning mini-games, or taking the best photos during sessions.
@@ -1896,6 +1922,95 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
               </div>
             )}
           </form>
+        </div>
+      )}
+
+      {/* STAFF TAB 5: PARTICIPANT MESSAGES TO KSO */}
+      {staffTab === 'KSO_MESSAGES' && (
+        <div className="tech-card p-5">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#141414] pb-4 mb-5">
+            <div>
+              <h3 className="font-mono font-bold text-slate-900 text-sm uppercase flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-indigo-700" />
+                <span>Participant Messages to KSO ({ksoSubmissions.length})</span>
+              </h3>
+              <p className="text-xs text-slate-500 font-mono mt-0.5">
+                View and filter feedback and messages sent by attendees directly to KSO.
+              </p>
+            </div>
+
+            {/* Search Input Box */}
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={ksoSearchQuery}
+                onChange={(e) => setKsoSearchQuery(e.target.value)}
+                placeholder="Search name, company, or message..."
+                className="tech-input w-full pl-9 pr-8 text-xs font-mono py-2"
+              />
+              {ksoSearchQuery && (
+                <button
+                  onClick={() => setKsoSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-black cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {filteredKsoSubmissions.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 text-xs font-mono border border-dashed border-slate-300 bg-slate-50/50 p-6">
+              {ksoSearchQuery ? (
+                <p>[SEARCH] No messages found matching &quot;{ksoSearchQuery}&quot;.</p>
+              ) : (
+                <p>[EMPTY] No participant messages submitted yet.</p>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredKsoSubmissions.map((sub) => {
+                const participant = participants.find(
+                  p => p.id === sub.participantId || p.name.toLowerCase() === sub.participantName.toLowerCase()
+                );
+                const company = participant?.company || 'N/A';
+                const position = participant?.position || '';
+
+                return (
+                  <div
+                    key={sub.id}
+                    className="bg-[#DFDEDA] border-[1.5px] border-[#141414] p-4 flex flex-col justify-between font-mono relative"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start gap-2 border-b border-black/10 pb-2">
+                        <div>
+                          <h4 className="font-bold text-sm text-black flex items-center gap-1.5 uppercase">
+                            <span>{sub.participantName}</span>
+                          </h4>
+                          <p className="text-[11px] text-slate-600 font-bold uppercase mt-0.5">
+                            🏢 {company} {position ? `• ${position}` : ''}
+                          </p>
+                        </div>
+                        <span className="bg-[#00FF00] border border-black text-black font-bold text-[10px] px-2 py-0.5 font-mono shrink-0">
+                          +{sub.pointsAwarded || 5} PTS
+                        </span>
+                      </div>
+
+                      <div className="bg-white border border-[#141414] p-3 text-xs text-slate-800 break-words leading-relaxed font-sans shadow-inner">
+                        &ldquo;{sub.content}&rdquo;
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-2 border-t border-black/10 flex justify-between items-center text-[10px] text-slate-500 font-mono">
+                      <span>ID: {sub.participantId}</span>
+                      <span>{sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('id-ID') : 'Just now'}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
