@@ -41,7 +41,7 @@ const DEFAULT_EVENT_CONFIG: EventConfig = {
     {
       id: 'ACT_FEEDBACK',
       type: 'FEEDBACK',
-      name: 'Submit Event Feedback',
+      name: 'MESSAGE TO KSO',
       description: 'Let the organizer know how we did. Auto-approved on submit.',
       points: 5,
       isEnabled: true,
@@ -390,7 +390,7 @@ const DEFAULT_EVENTS_LIST: EventPlannerItem[] = [
     },
     activities: [
       { id: "act-cfg-1", type: "CHECK_IN", name: "Summit Gate Check-In", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC" },
-      { id: "act-cfg-2", type: "FEEDBACK", name: "Anonymous Feedback Form", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC" },
+      { id: "act-cfg-2", type: "FEEDBACK", name: "MESSAGE TO KSO", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC" },
       { id: "act-cfg-3", type: "PHOTO_UPLOAD", name: "Photo Wall Upload", isEnabled: true, requireApproval: true, validationMethod: "STAFF_APPROVAL" },
       { id: "act-cfg-4", type: "INSTAGRAM_POST", name: "Social Media Outreach", isEnabled: true, requireApproval: true, validationMethod: "STAFF_APPROVAL" },
       { id: "act-cfg-5", type: "SONG_REQUEST", name: "Stage Song Request", isEnabled: true, requireApproval: true, validationMethod: "STAFF_APPROVAL" },
@@ -685,7 +685,9 @@ app.post("/api/planner/events", (req, res) => {
         appUrl: db.eventConfig?.appUrl,
         schedule: newEvent.schedule.map(s => ({ time: s.time, activity: s.activity, description: s.description })),
         pointRules: newEvent.pointRules,
+        activities: newEvent.activities || [],
         googleMapsUrl: newEvent.venueDetails?.googleMapsUrl,
+        sponsorBooths: newEvent.sponsorBooths,
         showLeaderboardRank: newEvent.showLeaderboardRank !== false
       };
     }
@@ -722,7 +724,9 @@ app.post("/api/planner/events/duplicate", (req, res) => {
       appUrl: db.eventConfig?.appUrl,
       schedule: duplicated.schedule.map(s => ({ time: s.time, activity: s.activity, description: s.description })),
       pointRules: duplicated.pointRules,
+      activities: duplicated.activities || [],
       googleMapsUrl: duplicated.venueDetails?.googleMapsUrl,
+      sponsorBooths: duplicated.sponsorBooths,
       showLeaderboardRank: duplicated.showLeaderboardRank !== false
     };
     
@@ -771,6 +775,7 @@ app.post("/api/planner/config/all", (req, res) => {
         appUrl: db.eventConfig?.appUrl,
         schedule: updatedEvent.schedule.map(s => ({ time: s.time, activity: s.activity, description: s.description })),
         pointRules: updatedEvent.pointRules,
+        activities: updatedEvent.activities || [],
         googleMapsUrl: updatedEvent.venueDetails?.googleMapsUrl,
         sponsorBooths: updatedEvent.sponsorBooths,
         showLeaderboardRank: updatedEvent.showLeaderboardRank !== false

@@ -298,7 +298,7 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
         },
         activities: [
           { id: `act-${Date.now()}-1`, type: "CHECK_IN", name: "Main Desk Check-In", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC" },
-          { id: `act-${Date.now()}-2`, type: "FEEDBACK", name: "Post-event Feedback", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC" },
+          { id: `act-${Date.now()}-2`, type: "FEEDBACK", name: "MESSAGE TO KSO", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC" },
           { id: `act-${Date.now()}-3`, type: "NETWORKING", name: "Attendee Networking Challenge", isEnabled: true, requireApproval: false, validationMethod: "QR_SCAN", points: 15 }
         ],
         sponsorBooths: [
@@ -1118,7 +1118,7 @@ export default function EventPlanner({ onRefreshAll }: EventPlannerProps) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                           {[
                             { key: 'CHECK_IN', label: 'Summit Arrival Check-In', color: 'border-emerald-400 bg-emerald-50/50' },
-                            { key: 'FEEDBACK', label: 'Submit App Feedback Form', color: 'border-blue-400 bg-blue-50/50' },
+                            { key: 'FEEDBACK', label: 'MESSAGE TO KSO', color: 'border-blue-400 bg-blue-50/50' },
                             { key: 'PHOTO_UPLOAD', label: 'Upload Photo Wall snap', color: 'border-purple-400 bg-purple-50/50' },
                             { key: 'INSTAGRAM_POST', label: 'Share Tagged Social Story', color: 'border-rose-400 bg-rose-50/50' },
                             { key: 'SONG_REQUEST', label: 'Request Stage Band Song', color: 'border-amber-400 bg-amber-50/50' },

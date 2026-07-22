@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import QRCodeDisplay from './QRCodeDisplay';
 import { 
   Users, TrendingUp, Award, Download, Trash2, Search, QrCode, Sparkles, 
   RefreshCw, MapPin, Building, Mail, Briefcase, Calendar, ShieldAlert, CheckCircle 
@@ -589,16 +590,15 @@ export default function SponsorBoothManager() {
               <span className="text-[10px] text-indigo-700 font-bold block mt-0.5">Code: {selectedQRBooth.boothCode}</span>
             </div>
 
-            {/* Live QR Code from QR Server API */}
+            {/* Live Local Client-Generated QR Code */}
             <div className="bg-white border-[1.5px] border-[#141414] p-4 flex flex-col items-center justify-center relative">
-              <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(selectedQRBooth.boothCode)}`}
-                alt={`QR Code for ${selectedQRBooth.name}`}
-                className="w-48 h-48 block shadow-sm border border-slate-100"
-                referrerPolicy="no-referrer"
+              <QRCodeDisplay
+                value={selectedQRBooth.boothCode}
+                size={250}
+                className="w-48 h-48 border border-slate-100"
               />
-              <div className="text-[8px] text-slate-400 mt-2 text-center select-all break-all max-w-full">
-                https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={selectedQRBooth.boothCode}
+              <div className="text-[8px] text-slate-500 mt-2 text-center font-mono font-bold select-all break-all max-w-full">
+                CODE: {selectedQRBooth.boothCode}
               </div>
             </div>
 

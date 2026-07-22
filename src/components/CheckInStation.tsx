@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import SearchableSelect from './SearchableSelect';
+import QRCodeDisplay from './QRCodeDisplay';
 import { 
   Search, QrCode, Printer, CheckCircle, Music, Award, ShieldAlert, Check, X, Camera, RefreshCw, 
   Wifi, WifiOff, Upload, AlertTriangle, AlertCircle, Sparkles, Smartphone, Monitor, ShieldCheck, HelpCircle
@@ -648,17 +649,7 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
 
   const renderBadgeQR = (text: string) => {
     return (
-      <svg className="w-24 h-24" viewBox="0 0 100 100" shapeRendering="crispEdges">
-        <rect width="100" height="100" fill="white" />
-        <path d="M 5,5 h 25 v 25 h -25 z M 10,10 h 15 v 15 h -15 z" fill="#000" />
-        <path d="M 65,5 h 25 v 25 h -25 z M 70,10 h 15 v 15 h -15 z" fill="#000" />
-        <path d="M 5,65 h 25 v 25 h -25 z M 10,70 h 15 v 15 h -15 z" fill="#000" />
-        <path d="M 35,10 h 10 v 10 h -10 z M 50,5 h 10 v 10 h -10 z" fill="#000" />
-        <path d="M 10,35 h 10 v 15 h -10 z M 25,45 h 15 v 5 h -15 z" fill="#000" />
-        <path d="M 65,35 h 10 v 20 h -10 z M 80,45 h 15 v 10 h -15 z" fill="#000" />
-        <path d="M 45,65 h 15 v 10 h -15 z M 35,80 h 10 v 15 h -10 z" fill="#000" />
-        <rect x="42" y="42" width="16" height="16" rx="2" fill="#000" />
-      </svg>
+      <QRCodeDisplay value={text || 'EH-BADGE-PASS'} size={120} className="w-24 h-24" />
     );
   };
 

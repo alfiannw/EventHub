@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import QRCodeDisplay from './QRCodeDisplay';
 import { 
   QrCode, Ticket, Sparkles, Send, Music, Image as ImageIcon, MessageSquare, 
   Award, CheckCircle2, AlertCircle, Camera, Check, Calendar, MapPin, ExternalLink,
@@ -845,11 +846,10 @@ export default function RegistrationPortal({
   const renderMockQR = (text: string) => {
     return (
       <div className="flex flex-col items-center justify-center p-2 bg-white border border-[#141414] mx-auto w-40 h-40">
-        <img
-          src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(text)}`}
-          alt={`QR Code for ${text}`}
-          className="w-36 h-36 block object-contain"
-          referrerPolicy="no-referrer"
+        <QRCodeDisplay
+          value={text || 'EH-PASS-CODE'}
+          size={180}
+          className="w-36 h-36"
         />
       </div>
     );
@@ -1456,7 +1456,7 @@ export default function RegistrationPortal({
                     }`}
                   >
                     <Award className="w-3.5 h-3.5 text-blue-700" />
-                    <span>Earn Points ({currentParticipant.points} PTS)</span>
+                    <span>Activities</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('SPONSORS')}
@@ -1677,30 +1677,54 @@ export default function RegistrationPortal({
                 </div>
 
                 {/* Dynamic Activities Mapping */}
-                {eventConfig?.activities?.filter(a => a.isEnabled).map((act, index) => {
-                  const isSubmitted = 
-                    (act.type === 'FEEDBACK' && feedbackSubmitted) || 
-                    (act.type === 'PHOTO_UPLOAD' && photoUploaded) ||
-                    (act.type === 'INSTAGRAM_POST' && instagramUploaded);
+                {(() => {
+                  const defaultFallbackActivities = [
+                    { id: "act-cfg-1", type: "CHECK_IN", name: "Summit Gate Check-In", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC", points: 5, description: "Scan pass at front desk upon arrival to verify entry.", startTime: "", endTime: "", requiresCamera: false, requiresGallery: false },
+                    { id: "act-cfg-2", type: "FEEDBACK", name: "MESSAGE TO KSO", isEnabled: true, requireApproval: false, validationMethod: "AUTOMATIC", points: 5, description: "Let the organizer know how we did. Auto-approved on submit.", startTime: "", endTime: "", requiresCamera: false, requiresGallery: false },
+                    { id: "act-cfg-3", type: "PHOTO_UPLOAD", name: "Photo Wall Upload", isEnabled: true, requireApproval: true, validationMethod: "STAFF_APPROVAL", points: 5, description: "Snap and upload your best moment from today. Pending Staff review.", startTime: "", endTime: "", requiresCamera: false, requiresGallery: false },
+                    { id: "act-cfg-4", type: "INSTAGRAM_POST", name: "Social Media Outreach", isEnabled: true, requireApproval: true, validationMethod: "STAFF_APPROVAL", points: 5, description: "Share your experience on IG using #EventHub2026. Pending Staff review.", startTime: "", endTime: "", requiresCamera: false, requiresGallery: false },
+                    { id: "act-cfg-5", type: "SONG_REQUEST", name: "Stage Song Request", isEnabled: true, requireApproval: true, validationMethod: "STAFF_APPROVAL", points: 5, description: "Submit favorite tracks to live performers.", startTime: "", endTime: "", requiresCamera: false, requiresGallery: false },
+                    { id: "act-cfg-6", type: "NETWORKING", name: "Attendee Networking Challenge", isEnabled: true, requireApproval: false, validationMethod: "QR_SCAN", points: 15, description: "Exchange badge QR codes with other attendees on-site to connect and earn points.", startTime: "", endTime: "", requiresCamera: false, requiresGallery: false }
+                  ];
 
-                  return (
-                    <div key={act.id} className="tech-card p-5">
-                      <div className="flex justify-between items-start border-b border-[#141414] pb-3">
-                        <div>
-                          <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2 uppercase">
-                            <CheckSquare className="w-4 h-4 text-black" />
-                            <span>{String(index + 1).padStart(2, '0')}. {act.name}</span>
-                          </h4>
-                          <p className="text-[11px] text-slate-500 mt-0.5">{act.description}</p>
-                          {(act.startTime || act.endTime) && (
-                            <p className="text-[10px] text-indigo-700 font-bold mt-1 uppercase">Time: {act.startTime || 'Open'} - {act.endTime || 'End'}</p>
-                          )}
-                          <p className="text-[10px] text-slate-700 font-bold mt-1 uppercase border border-slate-300 inline-block px-1.5 py-0.5 bg-slate-50">
-                            Verification: {act.validationMethod || (act.requireApproval ? 'STAFF_APPROVAL' : 'AUTOMATIC')}
-                          </p>
-                        </div>
-                        <span className="bg-[#00FF00] border border-black text-black font-bold text-xs px-2.5 py-1 rounded-none font-mono">+{act.points} PTS</span>
+                  const availableActivities = (eventConfig?.activities && eventConfig.activities.length > 0)
+                    ? eventConfig.activities
+                    : defaultFallbackActivities;
+
+                  const activeActivitiesList = availableActivities.filter(a => a.isEnabled !== false && a.type !== 'NETWORKING');
+
+                  if (activeActivitiesList.length === 0) {
+                    return (
+                      <div className="tech-card p-6 text-center text-slate-500 font-mono text-xs">
+                        [INFO] No host activities are currently enabled for this event.
                       </div>
+                    );
+                  }
+
+                  return activeActivitiesList.map((act, index) => {
+                    const isSubmitted = 
+                      (act.type === 'FEEDBACK' && feedbackSubmitted) || 
+                      (act.type === 'PHOTO_UPLOAD' && photoUploaded) ||
+                      (act.type === 'INSTAGRAM_POST' && instagramUploaded);
+
+                    return (
+                      <div key={act.id} className="tech-card p-5">
+                        <div className="flex justify-between items-start border-b border-[#141414] pb-3">
+                          <div>
+                            <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2 uppercase">
+                              <CheckSquare className="w-4 h-4 text-black" />
+                              <span>{String(index + 1).padStart(2, '0')}. {act.type === 'FEEDBACK' ? 'MESSAGE TO KSO' : act.name}</span>
+                            </h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5">{act.description}</p>
+                            {(act.startTime || act.endTime) && (
+                              <p className="text-[10px] text-indigo-700 font-bold mt-1 uppercase">Time: {act.startTime || 'Open'} - {act.endTime || 'End'}</p>
+                            )}
+                            <p className="text-[10px] text-slate-700 font-bold mt-1 uppercase border border-slate-300 inline-block px-1.5 py-0.5 bg-slate-50">
+                              Verification: {act.validationMethod || (act.requireApproval ? 'STAFF_APPROVAL' : 'AUTOMATIC')}
+                            </p>
+                          </div>
+                          <span className="bg-[#00FF00] border border-black text-black font-bold text-xs px-2.5 py-1 rounded-none font-mono">+{act.points || 5} PTS</span>
+                        </div>
 
                       <div className="mt-4">
                         {act.type === 'FEEDBACK' ? (
@@ -1708,7 +1732,7 @@ export default function RegistrationPortal({
                             <textarea
                               value={feedback}
                               onChange={(e) => setFeedback(e.target.value)}
-                              placeholder="Type your feedback here (minimum 10 characters)..."
+                              placeholder="Type your message to KSO here (minimum 10 characters)..."
                               required
                               rows={3}
                               className="tech-input w-full font-mono text-xs p-3"
@@ -1718,12 +1742,12 @@ export default function RegistrationPortal({
                               disabled={feedback.length < 10}
                               className="btn-action-primary text-xs py-2 px-4 disabled:opacity-50"
                             >
-                              Submit Feedback
+                              Send Message to KSO
                             </button>
                             {feedbackSubmitted && (
                               <div className="text-xs text-[#141414] font-bold flex items-center gap-1.5 mt-2 bg-[#00FF00]/20 border border-black p-2 rounded-none">
                                 <Check className="w-4 h-4 text-[#141414] shrink-0" />
-                                <span>[APPROVED] Feedback logged! +{act.points} points added.</span>
+                                <span>[APPROVED] Message sent! +{act.points} points added.</span>
                               </div>
                             )}
                           </form>
@@ -1990,7 +2014,8 @@ export default function RegistrationPortal({
                       </div>
                     </div>
                   );
-                })}
+                });
+              })()}
               </div>
             )}
 

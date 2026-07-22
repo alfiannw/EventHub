@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import QRCodeDisplay from '../../../../../src/components/QRCodeDisplay';
 import { 
   QrCode, User, FileText, Settings, Key, AlertCircle, 
   CheckCircle2, RefreshCw, XCircle, ShieldCheck, Download, 
@@ -271,17 +272,7 @@ export default function QrGenerationPage() {
 
     return (
       <div className={`p-4 bg-white border border-slate-200 flex flex-col justify-center items-center relative ${isRevoked ? 'opacity-30' : ''}`}>
-        <svg className="w-28 h-28 mx-auto" viewBox="0 0 100 100" shapeRendering="crispEdges">
-          <rect width="100" height="100" fill="white" />
-          <path d="M 5,5 h 25 v 25 h -25 z M 10,10 h 15 v 15 h -15 z" fill="#090d16" />
-          <path d="M 65,5 h 25 v 25 h -25 z M 70,10 h 15 v 15 h -15 z" fill="#090d16" />
-          <path d="M 5,65 h 25 v 25 h -25 z M 10,70 h 15 v 15 h -15 z" fill="#090d16" />
-          <path d="M 35,10 h 10 v 10 h -10 z M 50,5 h 10 v 10 h -10 z M 35,25 h 15 v 5 h -15 z" fill="#090d16" />
-          <path d="M 10,35 h 10 v 15 h -10 z M 25,45 h 15 v 5 h -15 z M 5,55 h 20 v 5 h -20 z" fill="#090d16" />
-          <path d="M 65,35 h 10 v 20 h -10 z M 80,45 h 15 v 10 h -15 z M 75,55 h 15 v 5 h -15 z" fill="#090d16" />
-          <rect x="42" y="42" width="16" height="16" rx="1" fill="#090d16" />
-          <text x="50" y="52" fill="#FFFFFF" fontSize="6" fontWeight="bold" textAnchor="middle">PASS</text>
-        </svg>
+        <QRCodeDisplay value={text} size={150} className="w-28 h-28 mx-auto" />
         <span className="font-mono text-[9px] text-slate-500 mt-2 tracking-widest">{text}</span>
         {isRevoked && (
           <div className="absolute inset-0 flex items-center justify-center bg-transparent">
