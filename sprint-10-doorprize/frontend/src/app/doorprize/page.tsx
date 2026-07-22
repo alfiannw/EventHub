@@ -162,19 +162,49 @@ export default function DoorPrizeSprintPage() {
     }
   };
 
+  // Helper to retrieve detailed prize item info for each tier level
+  const getPrizeDetails = (tierLevel: number, tierName?: string) => {
+    if (tierLevel === 3 || (tierName && tierName.toLowerCase().includes('gold'))) {
+      return {
+        item: 'Smart Watch Pro & VIP Merch Kit',
+        category: 'Gold Tier Reward',
+        badgeColor: 'bg-amber-100 text-amber-950 border-amber-300',
+        icon: '🏆'
+      };
+    }
+    if (tierLevel === 2 || (tierName && tierName.toLowerCase().includes('silver'))) {
+      return {
+        item: 'ANC Wireless Earbuds & Tumbler',
+        category: 'Silver Tier Reward',
+        badgeColor: 'bg-slate-100 text-slate-900 border-slate-300',
+        icon: '🎧'
+      };
+    }
+    return {
+      item: 'Event Souvenir Pack & Tote Bag',
+      category: 'Bronze Tier Reward',
+      badgeColor: 'bg-orange-50 text-orange-950 border-orange-300',
+      icon: '🎁'
+    };
+  };
+
   // Export claims log to CSV
   const handleExportCSV = () => {
     if (claimsLogs.length === 0) return;
-    const headers = ['Claim ID', 'Participant ID', 'Attendee Name', 'Company', 'Eligible Tier', 'Claimed At', 'Authorized Actor'];
-    const rows = claimsLogs.map(c => [
-      c.id,
-      c.participantId,
-      c.participantName,
-      c.participantCompany,
-      c.eligibleTier,
-      c.claimedAt.toISOString ? c.claimedAt.toISOString() : String(c.claimedAt),
-      c.actorId
-    ]);
+    const headers = ['Claim ID', 'Participant ID', 'Attendee Name', 'Company', 'Eligible Tier', 'Prize Item', 'Claimed At', 'Authorized Actor'];
+    const rows = claimsLogs.map(c => {
+      const prize = getPrizeDetails(0, c.eligibleTier);
+      return [
+        c.id,
+        c.participantId,
+        c.participantName,
+        c.participantCompany,
+        c.eligibleTier,
+        prize.item,
+        c.claimedAt.toISOString ? c.claimedAt.toISOString() : String(c.claimedAt),
+        c.actorId
+      ];
+    });
 
     const csvContent = [headers, ...rows]
       .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
@@ -334,110 +364,131 @@ export default function DoorPrizeSprintPage() {
                     <th className="py-2.5 px-3">Attendee Profile</th>
                     <th className="py-2.5 px-3">Points</th>
                     <th className="py-2.5 px-3 text-center">Eligibility Tier</th>
+                    <th className="py-2.5 px-3">Prize Reward Info</th>
                     <th className="py-2.5 px-3 text-right">Actions / Redemptions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {participants.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-slate-400 italic font-mono text-[11px]">
+                      <td colSpan={5} className="py-8 text-center text-slate-400 italic font-mono text-[11px]">
                         No matching checked-in event attendees found.
                       </td>
                     </tr>
                   ) : (
-                    participants.map((p) => (
-                      <tr 
-                        key={p.participantId} 
-                        className={`hover:bg-[#DFDEDA]/20 transition-colors ${
-                          selectedParticipantId === p.participantId ? 'bg-amber-50/70 border-l-[3px] border-amber-500' : ''
-                        }`}
-                        onClick={() => setSelectedParticipantId(p.participantId)}
-                      >
-                        <td className="py-3 px-3 flex items-center gap-3">
-                          <img
-                            src={p.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
-                            alt={p.name}
-                            referrerPolicy="no-referrer"
-                            className="w-8 h-8 rounded-none border border-black shrink-0 bg-slate-100 object-cover"
-                          />
-                          <div className="min-w-0">
-                            <div className="font-bold text-[#141414] uppercase truncate flex items-center gap-1.5">
-                              <span>{p.name}</span>
-                              {!p.checkedIn && (
-                                <span className="bg-rose-100 text-rose-800 text-[8px] font-black px-1 border border-rose-300">ABSENT</span>
-                              )}
-                            </div>
-                            <div className="text-[9px] text-slate-500 uppercase truncate">
-                              {p.company} — {p.position}
-                            </div>
-                          </div>
-                        </td>
-                        
-                        <td className="py-3 px-3 font-mono">
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-black">{p.points} PTS</span>
-                            <div className="flex gap-0.5">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); handleAdjustPoints(p.participantId, 5); }}
-                                className="p-0.5 border border-black hover:bg-slate-100 cursor-pointer text-slate-700"
-                                title="Add 5 Points"
-                              >
-                                <Plus className="w-2.5 h-2.5" />
-                              </button>
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); handleAdjustPoints(p.participantId, -5); }}
-                                className="p-0.5 border border-black hover:bg-slate-100 cursor-pointer text-slate-700"
-                                title="Deduct 5 Points"
-                              >
-                                <Minus className="w-2.5 h-2.5" />
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="py-3 px-3 text-center">
-                          <span className={`inline-block font-black text-[9px] uppercase px-2 py-0.5 border ${
-                            p.tierLevel === 3 ? 'bg-amber-100 text-amber-950 border-amber-400' :
-                            p.tierLevel === 2 ? 'bg-slate-100 text-slate-950 border-slate-400' :
-                            'bg-orange-50 text-orange-950 border-orange-400'
-                          }`}>
-                            {p.eligibleTier}
-                          </span>
-                        </td>
-
-                        <td className="py-3 px-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {p.claimed ? (
-                              <div className="flex flex-col items-end">
-                                <span className="bg-emerald-100 text-emerald-950 text-[9px] font-black px-2 py-0.5 border border-emerald-400 flex items-center gap-1 select-none">
-                                  <Check className="w-3 h-3 text-emerald-800 stroke-[3]" />
-                                  <span>CLAIMED</span>
-                                </span>
-                                {p.claimedAt && (
-                                  <span className="text-[8px] text-slate-400 font-mono mt-0.5">
-                                    {new Date(p.claimedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                  </span>
+                    participants.map((p) => {
+                      const prize = getPrizeDetails(p.tierLevel, p.eligibleTier);
+                      return (
+                        <tr 
+                          key={p.participantId} 
+                          className={`hover:bg-[#DFDEDA]/20 transition-colors ${
+                            selectedParticipantId === p.participantId ? 'bg-amber-50/70 border-l-[3px] border-amber-500' : ''
+                          }`}
+                          onClick={() => setSelectedParticipantId(p.participantId)}
+                        >
+                          <td className="py-3 px-3 flex items-center gap-3">
+                            <img
+                              src={p.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'}
+                              alt={p.name}
+                              referrerPolicy="no-referrer"
+                              className="w-8 h-8 rounded-none border border-black shrink-0 bg-slate-100 object-cover"
+                            />
+                            <div className="min-w-0">
+                              <div className="font-bold text-[#141414] uppercase truncate flex items-center gap-1.5">
+                                <span>{p.name}</span>
+                                {!p.checkedIn && (
+                                  <span className="bg-rose-100 text-rose-800 text-[8px] font-black px-1 border border-rose-300">ABSENT</span>
                                 )}
                               </div>
-                            ) : !p.checkedIn ? (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleQuickCheckIn(p.participantId); }}
-                                className="bg-rose-50 hover:bg-rose-100 text-rose-800 text-[9px] py-1 px-2 border border-rose-400 font-bold uppercase transition-colors cursor-pointer"
-                              >
-                                Check In Guest
-                              </button>
-                            ) : (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleClaimPrize(p.participantId, p.eligibleTier); }}
-                                className="bg-black hover:bg-neutral-800 text-[#00FF00] text-[9px] py-1.5 px-3 border border-black font-extrabold uppercase tracking-wide cursor-pointer transition-all active:scale-95"
-                              >
-                                Redeem Prize
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                              <div className="text-[9px] text-slate-500 uppercase truncate">
+                                {p.company} — {p.position}
+                              </div>
+                            </div>
+                          </td>
+                          
+                          <td className="py-3 px-3 font-mono">
+                            <div className="flex items-center gap-2">
+                              <span className="font-extrabold text-black">{p.points} PTS</span>
+                              <div className="flex gap-0.5">
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleAdjustPoints(p.participantId, 5); }}
+                                  className="p-0.5 border border-black hover:bg-slate-100 cursor-pointer text-slate-700"
+                                  title="Add 5 Points"
+                                >
+                                  <Plus className="w-2.5 h-2.5" />
+                                </button>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleAdjustPoints(p.participantId, -5); }}
+                                  className="p-0.5 border border-black hover:bg-slate-100 cursor-pointer text-slate-700"
+                                  title="Deduct 5 Points"
+                                >
+                                  <Minus className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3 text-center">
+                            <span className={`inline-block font-black text-[9px] uppercase px-2 py-0.5 border ${
+                              p.tierLevel === 3 ? 'bg-amber-100 text-amber-950 border-amber-400' :
+                              p.tierLevel === 2 ? 'bg-slate-100 text-slate-950 border-slate-400' :
+                              'bg-orange-50 text-orange-950 border-orange-400'
+                            }`}>
+                              {p.eligibleTier}
+                            </span>
+                          </td>
+
+                          {/* PRIZE ITEM / REWARD INFO COLUMN */}
+                          <td className="py-3 px-3 font-mono">
+                            <div className="min-w-[190px]">
+                              <div className="font-extrabold text-[#141414] text-[11px] uppercase flex items-center gap-1.5">
+                                <span className="text-xs shrink-0">{prize.icon}</span>
+                                <span className="truncate">{prize.item}</span>
+                              </div>
+                              <div className="text-[9px] text-slate-500 uppercase font-bold mt-0.5">
+                                🎁 Redeemable Item
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {p.claimed ? (
+                                <div className="flex flex-col items-end">
+                                  <span className="bg-emerald-100 text-emerald-950 text-[9px] font-black px-2 py-0.5 border border-emerald-400 flex items-center gap-1 select-none">
+                                    <Check className="w-3 h-3 text-emerald-800 stroke-[3]" />
+                                    <span>CLAIMED</span>
+                                  </span>
+                                  <span className="text-[8px] text-slate-500 font-bold font-mono mt-0.5 truncate max-w-[120px]">
+                                    {prize.item.split('&')[0]}
+                                  </span>
+                                  {p.claimedAt && (
+                                    <span className="text-[8px] text-slate-400 font-mono mt-0.2">
+                                      {new Date(p.claimedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : !p.checkedIn ? (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleQuickCheckIn(p.participantId); }}
+                                  className="bg-rose-50 hover:bg-rose-100 text-rose-800 text-[9px] py-1 px-2 border border-rose-400 font-bold uppercase transition-colors cursor-pointer"
+                                >
+                                  Check In Guest
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleClaimPrize(p.participantId, p.eligibleTier); }}
+                                  className="bg-black hover:bg-neutral-800 text-[#00FF00] text-[9px] py-1.5 px-3 border border-black font-extrabold uppercase tracking-wide cursor-pointer transition-all active:scale-95 flex items-center gap-1"
+                                >
+                                  <span>Redeem</span>
+                                  <span className="text-[8px] opacity-80">({prize.item.split('&')[0]})</span>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -479,6 +530,14 @@ export default function DoorPrizeSprintPage() {
                       </div>
                       <div className="text-[10px] text-slate-600 uppercase">
                         ID: {target.participantId} | Current Points: <span className="font-black text-black">{target.points} PTS</span>
+                      </div>
+
+                      <div className="text-[10px] font-bold text-amber-950 bg-amber-100 p-2 border border-amber-300 uppercase flex items-center gap-1.5">
+                        <span className="text-xs">{getPrizeDetails(target.tierLevel, target.eligibleTier).icon}</span>
+                        <div className="truncate">
+                          <span className="block text-[8px] text-amber-800 font-extrabold">Eligible Reward Item:</span>
+                          <span className="truncate block font-black">{getPrizeDetails(target.tierLevel, target.eligibleTier).item}</span>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 pt-1">
@@ -567,24 +626,31 @@ export default function DoorPrizeSprintPage() {
               {claimsLogs.length === 0 ? (
                 <p className="text-slate-500 italic text-center py-4">No prizes claimed in this session yet.</p>
               ) : (
-                claimsLogs.map((log) => (
-                  <div key={log.id} className="bg-neutral-900 border border-slate-800 p-2.5 space-y-1">
-                    <div className="flex justify-between items-center text-slate-400 font-bold uppercase">
-                      <span className="text-[#00FF00] truncate max-w-[150px]">{log.participantName}</span>
-                      <span>{log.id.split('-')[0]}</span>
+                claimsLogs.map((log) => {
+                  const prize = getPrizeDetails(0, log.eligibleTier);
+                  return (
+                    <div key={log.id} className="bg-neutral-900 border border-slate-800 p-2.5 space-y-1">
+                      <div className="flex justify-between items-center text-slate-400 font-bold uppercase">
+                        <span className="text-[#00FF00] truncate max-w-[150px]">{log.participantName}</span>
+                        <span>{log.id.split('-')[0]}</span>
+                      </div>
+                      <div className="text-[9px] text-slate-400 uppercase truncate">
+                        Company: {log.participantCompany}
+                      </div>
+                      <div className="bg-neutral-800 p-1.5 border border-neutral-700 text-[9px] flex items-center gap-1.5 text-amber-300">
+                        <span>{prize.icon}</span>
+                        <span className="font-extrabold truncate">{prize.item}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-400 text-[8px]">
+                        <span className="font-black text-white">{log.eligibleTier}</span>
+                        <span>By {log.actorId}</span>
+                      </div>
+                      <div className="text-right text-[8px] text-slate-500 font-mono">
+                        {new Date(log.claimedAt).toLocaleTimeString()}
+                      </div>
                     </div>
-                    <div className="text-[9px] text-slate-400 uppercase truncate">
-                      Company: {log.participantCompany}
-                    </div>
-                    <div className="flex justify-between items-center text-slate-400">
-                      <span className="font-black text-white">{log.eligibleTier}</span>
-                      <span>By {log.actorId}</span>
-                    </div>
-                    <div className="text-right text-[8px] text-slate-500 font-mono">
-                      {new Date(log.claimedAt).toLocaleTimeString()}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 

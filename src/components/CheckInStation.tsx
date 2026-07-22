@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import SearchableSelect from './SearchableSelect';
 import { 
   Search, QrCode, Printer, CheckCircle, Music, Award, ShieldAlert, Check, X, Camera, RefreshCw, 
   Wifi, WifiOff, Upload, AlertTriangle, AlertCircle, Sparkles, Smartphone, Monitor, ShieldCheck, HelpCircle
@@ -1827,19 +1828,21 @@ ORGANIZER EMERGENCY: +1 (555) 019-9111
           <form onSubmit={handleAwardSubmit} className="space-y-4 text-xs font-mono">
             <div className="space-y-1">
               <label className="text-[9px] font-bold text-slate-500 uppercase block">Select Target Participant *</label>
-              <select
+              <SearchableSelect
                 value={customAwardParticipantId}
-                onChange={(e) => setCustomAwardParticipantId(e.target.value)}
-                required
-                className="tech-select w-full"
-              >
-                <option value="">-- Choose Checked-In Participant --</option>
-                {participants
+                onChange={(val) => setCustomAwardParticipantId(val)}
+                placeholder="🔍 SEARCH NAME, COMPANY, OR ID..."
+                clearableText="-- CHOOSE CHECKED-IN PARTICIPANT --"
+                options={participants
                   .filter(p => p.checkedIn)
-                  .map(p => (
-                    <option key={p.id} value={p.id}>{p.id} - {p.name} ({p.company})</option>
-                  ))}
-              </select>
+                  .map(p => ({
+                    value: p.id,
+                    label: `${p.name.toUpperCase()} (${p.company.toUpperCase()})`,
+                    sublabel: `ID: ${p.id} • ${p.position || 'Guest'}`,
+                    badge: `${p.points} PTS`
+                  }))
+                }
+              />
             </div>
 
             <div className="space-y-1">

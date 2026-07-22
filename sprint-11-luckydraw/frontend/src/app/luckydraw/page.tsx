@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import SearchableSelect from '../../../../../src/components/SearchableSelect';
 import { 
   Trophy, 
   Search, 
@@ -857,7 +858,7 @@ export default function LuckyDrawSprintPage() {
               </div>
 
               {/* Client Choice: Rigging/Forced Winner Option */}
-              <div className="bg-amber-50/70 border border-amber-300 p-2.5 space-y-1.5 rounded-none">
+              <div className="bg-amber-50/70 border border-amber-300 p-2.5 space-y-2 rounded-none">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-amber-950 uppercase tracking-tight text-[9px] block flex items-center gap-1">
                     <Zap className="w-3 h-3 text-amber-600 fill-amber-500 animate-pulse" />
@@ -865,29 +866,65 @@ export default function LuckyDrawSprintPage() {
                   </span>
                   <span className="text-[7px] font-mono text-amber-800 bg-amber-200/50 px-1 uppercase font-bold">Client Override</span>
                 </div>
-                <select
-                  value={forcedWinnerId}
-                  onChange={(e) => {
-                    setForcedWinnerId(e.target.value);
-                    if (e.target.value) {
-                      const chosen = candidates.find(p => p.participantId === e.target.value);
-                      if (chosen) {
-                        setSuccessMessage(`Secret override active: ${chosen.name.toUpperCase()} will win the next draw!`);
+
+                {/* 1. Target Prize Tier Selection */}
+                <div className="space-y-1">
+                  <label className="text-[8px] font-bold text-amber-900 uppercase block">
+                    1. Select Target Prize Tier:
+                  </label>
+                  <SearchableSelect
+                    value={selectedPrizeTier}
+                    onChange={(val) => {
+                      setSelectedPrizeTier(val);
+                      const tierObj = prizesConfig.find(t => t.name === val);
+                      if (tierObj && tierObj.prizes.length > 0) {
+                        setSelectedPrizeName(tierObj.prizes[0].name);
                       }
-                    } else {
-                      setSuccessMessage('Secret override removed. Draws are now fair random again.');
+                      setSuccessMessage(`Target Prize Tier set to "${val.toUpperCase()}" for secret force selection.`);
+                    }}
+                    disabled={isSpinning}
+                    placeholder="🔍 SELECT PRIZE TIER..."
+                    options={prizesConfig.map(tier => ({
+                      value: tier.name,
+                      label: `🏆 ${tier.name.toUpperCase()}`,
+                      sublabel: tier.prizes.map(p => p.name).join(', '),
+                      badge: `MIN ${tier.eligiblePointsMin} PTS`
+                    }))}
+                  />
+                </div>
+
+                {/* 2. Target Forced Winner Participant Selection */}
+                <div className="space-y-1">
+                  <label className="text-[8px] font-bold text-amber-900 uppercase block">
+                    2. Select Forced Winner Participant:
+                  </label>
+                  <SearchableSelect
+                    value={forcedWinnerId}
+                    onChange={(val) => {
+                      setForcedWinnerId(val);
+                      if (val) {
+                        const chosen = candidates.find(p => p.participantId === val);
+                        if (chosen) {
+                          setSuccessMessage(`Secret override active: ${chosen.name.toUpperCase()} will win ${selectedPrizeTier.toUpperCase()} on next spin!`);
+                        }
+                      } else {
+                        setSuccessMessage('Secret override removed. Draws are now fair random again.');
+                      }
+                    }}
+                    disabled={isSpinning}
+                    placeholder="🔍 SEARCH NAME, COMPANY, OR ID..."
+                    clearableText="-- FAIR RANDOM SELECTION --"
+                    options={candidates
+                      .filter(p => p.checkedIn && !p.isWinner)
+                      .map(p => ({
+                        value: p.participantId,
+                        label: `${p.name.toUpperCase()} (${p.company.toUpperCase()})`,
+                        sublabel: `ID: ${p.participantId} • ${p.position || 'Guest'}`,
+                        badge: `${p.points} PTS`
+                      }))
                     }
-                  }}
-                  disabled={isSpinning}
-                  className="tech-input py-1 text-[10px] font-bold text-amber-900 border-amber-300 bg-amber-50/50 uppercase"
-                >
-                  <option value="">-- FAIR RANDOM SELECTION --</option>
-                  {candidates.filter(p => p.checkedIn && !p.isWinner).map(p => (
-                    <option key={p.participantId} value={p.participantId}>
-                      {p.name.toUpperCase()} ({p.company.toUpperCase()})
-                    </option>
-                  ))}
-                </select>
+                  />
+                </div>
               </div>
 
               {/* Custom Wheel Background Picture Uploader */}

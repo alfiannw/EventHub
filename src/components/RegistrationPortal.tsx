@@ -333,8 +333,137 @@ export default function RegistrationPortal({
     reader.readAsDataURL(file);
   };
 
+  // Networking Camera & Scan States
+  const [networkingCameraActive, setNetworkingCameraActive] = useState(false);
+  const [networkingCameraDevices, setNetworkingCameraDevices] = useState<MediaDeviceInfo[]>([]);
+  const [networkingSelectedDeviceId, setNetworkingSelectedDeviceId] = useState<string>('');
+  const [networkingFacingMode, setNetworkingFacingMode] = useState<'user' | 'environment'>('environment');
+  const [networkingCameraError, setNetworkingCameraError] = useState<string | null>(null);
+  const networkingVideoRef = useRef<HTMLVideoElement | null>(null);
+  const networkingCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastScannedNetworkingCode = useRef<string>('');
+  const lastScannedNetworkingTime = useRef<number>(0);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    let stream: MediaStream | null = null;
+
+    const startNetworkingCamera = async () => {
+      try {
+        setNetworkingCameraError(null);
+        const constraints: MediaStreamConstraints = {
+          video: networkingSelectedDeviceId 
+            ? { deviceId: { exact: networkingSelectedDeviceId } }
+            : { facingMode: networkingFacingMode }
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (networkingVideoRef.current) {
+          networkingVideoRef.current.srcObject = stream;
+          networkingVideoRef.current.setAttribute("playsinline", "true");
+          networkingVideoRef.current.play();
+        }
+        
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        setNetworkingCameraDevices(videoDevices);
+      } catch (err: any) {
+        console.error("Networking camera access error:", err);
+        setNetworkingCameraError(err.message || "Could not access camera. Please check camera permissions in browser.");
+      }
+    };
+
+    if (networkingCameraActive) {
+      startNetworkingCamera();
+    } else {
+      if (networkingVideoRef.current && networkingVideoRef.current.srcObject) {
+        const activeStream = networkingVideoRef.current.srcObject as MediaStream;
+        activeStream.getTracks().forEach(track => track.stop());
+        networkingVideoRef.current.srcObject = null;
+      }
+    }
+
+    const tickNetworking = () => {
+      if (networkingVideoRef.current && networkingVideoRef.current.readyState === networkingVideoRef.current.HAVE_ENOUGH_DATA && networkingCanvasRef.current) {
+        const canvas = networkingCanvasRef.current;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (ctx) {
+          canvas.height = networkingVideoRef.current.videoHeight;
+          canvas.width = networkingVideoRef.current.videoWidth;
+          ctx.drawImage(networkingVideoRef.current, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "attemptBoth",
+          });
+
+          if (code && code.data) {
+            handleDecodedNetworkingQR(code.data);
+          }
+        }
+      }
+      if (networkingCameraActive) {
+        animationFrameId = requestAnimationFrame(tickNetworking);
+      }
+    };
+
+    if (networkingCameraActive) {
+      animationFrameId = requestAnimationFrame(tickNetworking);
+    }
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [networkingCameraActive, networkingFacingMode, networkingSelectedDeviceId]);
+
+  const handleDecodedNetworkingQR = (qrText: string) => {
+    if (lastScannedNetworkingCode.current === qrText && Date.now() - lastScannedNetworkingTime.current < 2500) {
+      return;
+    }
+    lastScannedNetworkingCode.current = qrText;
+    lastScannedNetworkingTime.current = Date.now();
+
+    playSponsorBeep(true);
+    handleNetworkingConnect(qrText);
+    setNetworkingCameraActive(false);
+  };
+
+  const handleNetworkingQRImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setNetworkingError('');
+    setNetworkingSuccess('');
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
+          if (code && code.data) {
+            playSponsorBeep(true);
+            handleNetworkingConnect(code.data);
+          } else {
+            playSponsorBeep(false);
+            setNetworkingError("❌ Decode Failed: Could not find a clear QR code in this badge image.");
+          }
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   useEffect(() => {
     setSponsorCameraActive(false);
+    setNetworkingCameraActive(false);
   }, [activeTab]);
 
   // Networking Challenge States
@@ -2453,10 +2582,10 @@ export default function RegistrationPortal({
                       )}
                     </div>
 
-                    {/* Right side: Manual input / interactive selection */}
+                    {/* Right side: Verification rules */}
                     <div className="md:col-span-7 space-y-4">
                       <p className="text-xs text-slate-600 leading-relaxed">
-                        To claim points, click <strong className="text-indigo-600">Start Live Webcam</strong> above to scan the sponsor's QR code using your laptop/phone camera, upload a saved QR image, or manually type their sponsor code.
+                        To claim points, click <strong className="text-emerald-700">Start Live Webcam</strong> to scan the sponsor's physical QR code using your camera, or click <strong className="text-slate-800">Upload QR Pass</strong> to upload an image of the QR code.
                       </p>
 
                       {/* File Scan Error or Success */}
@@ -2494,62 +2623,6 @@ export default function RegistrationPortal({
                         <div className="p-3 bg-emerald-100 border-[1.5px] border-emerald-900 text-emerald-950 text-xs flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
                           <span>{boothScanSuccess}</span>
-                        </div>
-                      )}
-
-                      {/* Manual Code Input Form */}
-                      <form 
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          handleSponsorBoothScan(boothScanCode);
-                        }} 
-                        className="space-y-2"
-                      >
-                        <label className="text-[9px] font-bold text-slate-500 uppercase block">Enter Booth ID or Code Manually</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={boothScanCode}
-                            onChange={(e) => setBoothScanCode(e.target.value.toUpperCase())}
-                            placeholder="e.g. BOOTH-101"
-                            className="flex-1 bg-white border-[1.5px] border-[#141414] py-2 px-3 text-xs uppercase focus:outline-none font-bold"
-                          />
-                          <button
-                            type="submit"
-                            disabled={isSubmittingBoothScan || !boothScanCode.trim()}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 text-xs border-[1.5px] border-black disabled:bg-slate-300 disabled:border-slate-300 transition-colors uppercase cursor-pointer"
-                          >
-                            {isSubmittingBoothScan ? "Verifying..." : "Verify Code"}
-                          </button>
-                        </div>
-                      </form>
-
-                      {/* Simulated Interactive Scan Shortcuts */}
-                      {eventConfig?.sponsorBooths && eventConfig.sponsorBooths.length > 0 && (
-                        <div className="pt-2 border-t border-slate-200">
-                          <span className="text-[9px] font-bold text-slate-500 uppercase block mb-1.5">Interactive Demo Simulator:</span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {eventConfig.sponsorBooths.map(b => {
-                              const alreadyVisited = visitedBooths.some(v => v.boothId === b.id);
-                              return (
-                                <button
-                                  key={b.id}
-                                  type="button"
-                                  disabled={alreadyVisited || isSubmittingBoothScan}
-                                  onClick={() => handleSponsorBoothScan(b.boothCode)}
-                                  className={`px-2.5 py-1.5 text-[10px] font-bold border transition-all flex items-center gap-1 ${
-                                    alreadyVisited 
-                                      ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
-                                      : "bg-indigo-50 text-indigo-950 border-indigo-300 hover:bg-indigo-100 cursor-pointer"
-                                  }`}
-                                  title={alreadyVisited ? "Already scanned" : `Scan booth ${b.name}`}
-                                >
-                                  <span>📲</span>
-                                  <span>Scan {b.name} ({b.boothCode})</span>
-                                </button>
-                              );
-                            })}
-                          </div>
                         </div>
                       )}
                     </div>
@@ -2602,13 +2675,9 @@ export default function RegistrationPortal({
                                 </span>
                               </div>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleSponsorBoothScan(b.boothCode)}
-                                className="bg-slate-100 hover:bg-slate-200 border border-slate-400 text-slate-800 text-[10px] uppercase font-bold py-1 px-3 transition-colors cursor-pointer"
-                              >
-                                Scan Code
-                              </button>
+                              <span className="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-300 px-2 py-1 uppercase tracking-wider">
+                                📷 Camera Scan Required
+                              </span>
                             )}
                           </div>
                         </div>
@@ -2670,26 +2739,103 @@ export default function RegistrationPortal({
                   </div>
                 </div>
 
-                {/* Main QR Simulation / Manual Scan Form Card */}
-                <div className="tech-card p-6 font-mono grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                  <div className="md:col-span-4 bg-slate-50 border border-slate-300 p-4 flex flex-col items-center justify-center text-center aspect-square rounded-none">
-                    <div className="w-full h-full flex flex-col items-center justify-center border-2 border-dashed border-slate-400 p-2 relative group overflow-hidden">
-                      <QrCode className="w-16 h-16 text-slate-800 animate-pulse" />
-                      <div className="absolute inset-0 bg-slate-950/80 text-white flex flex-col items-center justify-center p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Scan className="w-8 h-8 text-[#00FF00] animate-bounce mb-2" />
-                        <span className="text-[10px] font-bold uppercase">Simulator Active</span>
+                {/* Main QR Networking Scanner Card */}
+                <div className="tech-card p-6 font-mono grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                  <div className="md:col-span-5 bg-black border-[1.5px] border-[#141414] aspect-square relative flex flex-col items-center justify-center p-4 overflow-hidden">
+                    <div className="absolute inset-0 bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:16px_16px] opacity-40" />
+                    
+                    {networkingCameraActive ? (
+                      <div className="absolute inset-0 flex flex-col justify-between p-2 z-10 bg-black">
+                        <div className="relative w-full flex-1 bg-neutral-900 border border-slate-700 overflow-hidden flex items-center justify-center">
+                          <video 
+                            ref={networkingVideoRef} 
+                            className="w-full h-full object-cover"
+                          />
+                          <canvas ref={networkingCanvasRef} className="hidden" />
+                          <div className="absolute inset-0 border-2 border-emerald-500/30 pointer-events-none"></div>
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-dashed border-emerald-400/60 pointer-events-none"></div>
+                          <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-bounce"></div>
+                        </div>
+
+                        <div className="flex gap-1.5 mt-2">
+                          {networkingCameraDevices.length > 1 && (
+                            <select
+                              value={networkingSelectedDeviceId}
+                              onChange={(e) => setNetworkingSelectedDeviceId(e.target.value)}
+                              className="bg-slate-900 text-white border border-slate-700 text-[9px] p-1 flex-1 font-mono focus:outline-none"
+                            >
+                              <option value="">Select Lens...</option>
+                              {networkingCameraDevices.map((device, i) => (
+                                <option key={device.deviceId} value={device.deviceId}>
+                                  {device.label || `Camera ${i + 1}`}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setNetworkingFacingMode(prev => prev === 'user' ? 'environment' : 'user')}
+                            className="bg-slate-800 text-slate-200 border border-slate-600 text-[8px] px-2 py-1 uppercase font-bold cursor-pointer hover:bg-slate-700"
+                          >
+                            Flip
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNetworkingCameraActive(false)}
+                            className="bg-rose-950 text-rose-200 border border-rose-800 text-[8px] px-2 py-1 uppercase font-bold cursor-pointer hover:bg-rose-900"
+                          >
+                            Stop
+                          </button>
+                        </div>
                       </div>
-                      <span className="text-[10px] font-black text-slate-600 mt-2 uppercase tracking-wide">Scan QR Code</span>
-                    </div>
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-center p-2 z-10 space-y-3">
+                        <div className="w-24 h-24 border-2 border-dashed border-slate-500 relative flex items-center justify-center">
+                          <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-slate-400" />
+                          <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-slate-400" />
+                          <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-slate-400" />
+                          <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-slate-400" />
+                          <QrCode className="w-10 h-10 text-slate-600" />
+                        </div>
+
+                        <div className="space-y-1.5 w-full">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNetworkingCameraActive(true);
+                              setNetworkingError('');
+                              setNetworkingSuccess('');
+                            }}
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-3 text-[10px] border border-black uppercase cursor-pointer flex items-center justify-center gap-1"
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>Scan Badge Camera</span>
+                          </button>
+
+                          <div className="text-slate-500 text-[8px] uppercase font-bold">OR UPLOAD BADGE IMAGE</div>
+
+                          <label className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-1.5 px-3 text-[10px] border border-slate-600 uppercase cursor-pointer flex items-center justify-center gap-1">
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Upload Badge QR</span>
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={handleNetworkingQRImageUpload} 
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="md:col-span-8 space-y-4">
+                  <div className="md:col-span-7 space-y-4">
                     <div>
                       <h4 className="font-bold text-xs uppercase text-slate-900 flex items-center gap-1.5">
                         <span>[ Attendee Connection Portal ]</span>
                       </h4>
                       <p className="text-[10px] text-slate-500 leading-relaxed mt-1">
-                        To claim networking points, point your cellphone camera at another attendee's digital badge QR code, or enter their custom badge code manually below.
+                        To claim networking points, use your camera to scan another attendee's physical digital badge QR code, or upload a photo/screenshot of their badge QR code.
                       </p>
                     </div>
 
@@ -2708,29 +2854,12 @@ export default function RegistrationPortal({
                       </div>
                     )}
 
-                    <form 
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        handleNetworkingConnect(networkingScanCode);
-                      }}
-                      className="flex gap-2"
-                    >
-                      <input 
-                        type="text"
-                        value={networkingScanCode}
-                        onChange={(e) => setNetworkingScanCode(e.target.value)}
-                        placeholder="e.g. EH-1002 or QRSIGN_xxx"
-                        className="flex-1 tech-input text-xs font-bold font-mono py-2 bg-white"
-                        disabled={isSubmittingNetworking}
-                      />
-                      <button
-                        type="submit"
-                        disabled={isSubmittingNetworking || !networkingScanCode.trim()}
-                        className="btn-action-primary text-xs font-black uppercase tracking-wider py-2 px-4 shrink-0 transition-all disabled:opacity-50"
-                      >
-                        {isSubmittingNetworking ? 'Verifying...' : 'Connect'}
-                      </button>
-                    </form>
+                    {networkingCameraError && (
+                      <div className="p-3 bg-amber-100 border-[1.5px] border-amber-900 text-amber-900 text-xs flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                        <span>{networkingCameraError}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2771,17 +2900,17 @@ export default function RegistrationPortal({
 
                       {connections.length === 0 && (
                         <div className="py-12 text-center text-slate-400 font-mono text-[10px] border border-dashed border-slate-200 bg-slate-50/50">
-                          No connections made yet.<br />Use the interactive simulator on the right to meet other attendees!
+                          No connections made yet.<br />Scan another attendee's badge QR code using your camera or QR image upload!
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Right Column: Checked-in Attendees Directory (Simulate physical scanner) */}
+                  {/* Right Column: Checked-in Attendees Directory */}
                   <div className="tech-card p-4 font-mono space-y-3 bg-slate-50">
                     <h4 className="font-black text-xs uppercase text-slate-900 border-b border-slate-300 pb-1.5 flex items-center justify-between">
-                      <span>On-Site Attendees ({leaderboard.filter(p => p.checkedIn && p.id !== currentParticipant.id).length})</span>
-                      <span className="text-[9px] text-indigo-700 font-bold bg-indigo-50 border border-indigo-200 px-1.5 py-0.5">SCANNER SIMULATOR</span>
+                      <span>On-Site Attendees Directory ({leaderboard.filter(p => p.checkedIn && p.id !== currentParticipant.id).length})</span>
+                      <span className="text-[9px] text-slate-500 font-bold bg-slate-200 border border-slate-300 px-1.5 py-0.5">DIRECTORIES</span>
                     </h4>
 
                     <div className="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
@@ -2797,7 +2926,6 @@ export default function RegistrationPortal({
                               <div>
                                 <span className="font-bold text-slate-800 text-xs block">{attendee.name}</span>
                                 <span className="text-[9px] text-slate-500 block">{attendee.position || 'Attendee'} @ {attendee.company}</span>
-                                <span className="text-[8px] text-indigo-500 font-bold font-mono">CODE: {attendee.qrCode || attendee.id}</span>
                               </div>
                               <div>
                                 {isPartnerConnected ? (
@@ -2805,13 +2933,9 @@ export default function RegistrationPortal({
                                     ✓ Connected
                                   </span>
                                 ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleNetworkingConnect(attendee.qrCode || attendee.id)}
-                                    className="bg-indigo-600 hover:bg-indigo-700 text-white border border-black text-[9px] uppercase font-black py-1 px-2.5 transition-colors cursor-pointer"
-                                  >
-                                    Scan Badge
-                                  </button>
+                                  <span className="text-[9px] font-bold text-slate-500 bg-slate-100 border border-slate-300 px-2 py-0.5 block uppercase text-center">
+                                    QR Scan Required
+                                  </span>
                                 )}
                               </div>
                             </div>

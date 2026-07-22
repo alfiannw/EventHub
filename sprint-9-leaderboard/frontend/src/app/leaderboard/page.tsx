@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import SearchableSelect from '../../../../../src/components/SearchableSelect';
 import { 
   Trophy, 
   Search, 
@@ -668,17 +669,17 @@ export default function LeaderboardSprintPage() {
               {/* Select Guest */}
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-slate-500 uppercase block">Select Attendee</label>
-                <select
+                <SearchableSelect
                   value={selectedAttendeeId}
-                  onChange={(e) => setSelectedAttendeeId(e.target.value)}
-                  className="tech-input w-full p-2 text-xs"
-                >
-                  {leaderboard.map(p => (
-                    <option key={p.participantId} value={p.participantId}>
-                      {p.name} ({p.company}) - {p.points} pts
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedAttendeeId(val)}
+                  placeholder="🔍 SEARCH ATTENDEE BY NAME OR COMPANY..."
+                  options={leaderboard.map(p => ({
+                    value: p.participantId,
+                    label: `${p.name.toUpperCase()} (${p.company.toUpperCase()})`,
+                    sublabel: `ID: ${p.participantId} • ${p.position || 'Guest'}`,
+                    badge: `${p.points} PTS`
+                  }))}
+                />
               </div>
 
               {/* Adjust Points Delta */}
@@ -773,17 +774,17 @@ export default function LeaderboardSprintPage() {
             <div className="mt-4 space-y-4">
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-slate-500 uppercase block">Selected Guest profile</label>
-                <select
+                <SearchableSelect
                   value={selectedMilestoneAttendeeId}
-                  onChange={(e) => setSelectedMilestoneAttendeeId(e.target.value)}
-                  className="tech-input w-full p-2 text-xs font-mono"
-                >
-                  {leaderboard.map(p => (
-                    <option key={p.participantId} value={p.participantId}>
-                      {p.name} - {p.points} PTS
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedMilestoneAttendeeId(val)}
+                  placeholder="🔍 SEARCH GUEST PROFILE..."
+                  options={leaderboard.map(p => ({
+                    value: p.participantId,
+                    label: `${p.name.toUpperCase()} (${p.company.toUpperCase()})`,
+                    sublabel: `ID: ${p.participantId} • ${p.position || 'Guest'}`,
+                    badge: `${p.points} PTS`
+                  }))}
+                />
               </div>
 
               {/* Milestones list status */}
